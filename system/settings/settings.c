@@ -866,7 +866,7 @@ int settings_sync(void)
   load();
 
   h = hash_calc();
-  if ((h != g_settings.hash))// || (g_settings.wrpend))
+  if ((h != g_settings.hash) || (g_settings.wrpend))
     {
       g_settings.hash = h;
 
