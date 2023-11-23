@@ -85,7 +85,7 @@ static int      set_ip(FAR setting_t *setting, struct in_addr *ip);
 static int      load(void);
 static int      save(void);
 static void     signotify(void);
-void            dump_cache(union sigval value);
+void            dump_cache(union sigval ptr);
 
 /****************************************************************************
  * Private Data
@@ -568,13 +568,12 @@ static int save(void)
 {
   int ret = OK;
 
-  g_settings.wrpend = true;
 #ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
   ret = timer_settime(g_settings.timerid, 0, &g_settings.trigger, NULL);
 #else
   union sigval value =
   {
-    .sival_int = 0,
+    .sival_ptr = &g_settings.wrpend;
   };
 
   dump_cache(value);
@@ -626,10 +625,10 @@ static void signotify(void)
  *
  ****************************************************************************/
 
-void dump_cache(union sigval value)
+void dump_cache(union sigval ptr)
 {
   int ret = OK;
-  UNUSED(value);
+  bool *wrpend = (bool *)ptr.sival_ptr;
 
   int i;
 
@@ -639,6 +638,8 @@ void dump_cache(union sigval value)
       DEBUGASSERT(0);
     }
 
+  while (*wrpend); /* Might be an outstanding save in progress */
+  *wrpend = true;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAX_STORAGES; i++)
     {
       if ((g_settings.store[i].file[0] != '\0') &&
@@ -652,7 +653,7 @@ void dump_cache(union sigval value)
         }
     }
 
-  g_settings.wrpend = false;
+  *wrpend = false;
 
   pthread_mutex_unlock(&g_settings.mtx);
 }
@@ -711,7 +712,7 @@ int settings_init(void)
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
-  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
   pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
   pthread_mutex_init(&g_settings.mtx, &attr);
 
@@ -726,7 +727,7 @@ int settings_init(void)
   memset(&g_settings.sev, 0, sizeof(struct sigevent));
   g_settings.sev.sigev_notify          = SIGEV_THREAD;
   g_settings.sev.sigev_signo           = TIMER_SIGNAL;
-  g_settings.sev.sigev_value.sival_int = 0;
+  g_settings.sev.sigev_value.sival_ptr = &g_settings.wrpend;
   g_settings.sev.sigev_notify_function = dump_cache;
 
   memset(&g_settings.trigger, 0, sizeof(struct itimerspec));
