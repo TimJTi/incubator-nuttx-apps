@@ -114,6 +114,7 @@ typedef struct
   pthread_mutex_t   mtx;
   uint32_t          hash;
   bool              wrpend;
+  bool              initialized;
   setting_t         map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
   storage_t         store[CONFIG_SYSTEM_SETTINGS_MAX_STORAGES];
   struct notify_s   notify[CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS];
@@ -191,13 +192,16 @@ int settings_setstorage(FAR char * file, enum storage_type_e type);
  *
  ****************************************************************************/
 
-int settings_sync(void);
+int settings_notify(void);
 
 /****************************************************************************
- * Name: settings_sync
+ * Name: settings_notify
  *
  * Description:
- *    Synchronizes the storage.
+ *    Registers a task to be notified on any change of the settings.
+ *    Whenever any value is changed, a signal will be sent to all
+ *    registered threads. Signals are NOT sent when new settings are
+ *    created or when the whole storage is cleared.
  *
  * Input Parameters:
  *    none

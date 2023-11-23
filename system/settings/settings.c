@@ -736,6 +736,8 @@ int settings_init(void)
 
   timer_create(CLOCK_REALTIME, &g_settings.sev, &g_settings.timerid);
 #endif
+  g_settings.initialized = true;
+
   return OK;
 }
 
@@ -770,6 +772,12 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+  
   while ((idx < CONFIG_SYSTEM_SETTINGS_MAX_STORAGES) &&
          (g_settings.store[idx].file[0] != '\0'))
     {
@@ -780,14 +788,14 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
   if (idx >= CONFIG_SYSTEM_SETTINGS_MAX_STORAGES)
     {
       ret = -ENOSPC;
-      goto end;
+      goto errout;
     }
 
   DEBUGASSERT(strlen(file) < CONFIG_SYSTEM_SETTINGS_MAX_FILENAME);
   if (strlen(file) >= CONFIG_SYSTEM_SETTINGS_MAX_FILENAME)
     {
       ret = -EINVAL;
-      goto end;
+      goto errout;
     }
 
   storage = &g_settings.store[idx];
@@ -832,7 +840,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
 
   g_settings.hash = h;
 
-end:
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return ret;
@@ -863,6 +871,12 @@ int settings_sync(void)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   load();
 
   h = hash_calc();
@@ -879,6 +893,7 @@ int settings_sync(void)
       dump_cache(value);
     }
 
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return OK;
@@ -912,6 +927,12 @@ int settings_notify(void)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+  
   while ((idx < CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS) &&
           g_settings.notify[idx].pid)
     {
@@ -956,6 +977,11 @@ errout:
 
 int settings_hash(FAR uint32_t *h)
 {
+  if (!g_settings.initialized)
+    {
+      return -EACCES;
+    }
+
   *h = g_settings.hash;
 
   return OK;
@@ -993,11 +1019,18 @@ int settings_clear(void)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   memset(g_settings.map, 0, sizeof(g_settings.map));
   g_settings.hash = 0;
 
   save();
 
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   while (g_settings.wrpend)
@@ -1060,6 +1093,12 @@ int settings_create(FAR char *key, enum settings_type_e type, ...)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
       if (strcmp(key, g_settings.map[i].key) == 0)
@@ -1068,7 +1107,7 @@ int settings_create(FAR char *key, enum settings_type_e type, ...)
 
           /* We found a setting with this key name */
 
-          goto exit;
+          goto errout;
         }
 
       if (g_settings.map[i].type == SETTING_EMPTY)
@@ -1151,7 +1190,7 @@ int settings_create(FAR char *key, enum settings_type_e type, ...)
         }
     }
 
-exit:
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return ret;
@@ -1186,10 +1225,17 @@ int settings_type(FAR char *key, FAR enum settings_type_e *stype)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   ret = get_setting(key, &setting);
 
   *stype = setting->type;
 
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return ret;
@@ -1226,10 +1272,16 @@ int settings_get(FAR char *key, enum settings_type_e type, ...)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+  
   ret = get_setting(key, &setting);
   if (ret < 0)
     {
-      goto end;
+      goto errout;
     }
 
   va_list ap;
@@ -1282,7 +1334,7 @@ int settings_get(FAR char *key, enum settings_type_e type, ...)
 
   va_end(ap);
 
-end:
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return ret;
@@ -1321,10 +1373,16 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   ret = get_setting(key, &setting);
   if (ret < 0)
     {
-      goto end;
+      goto errout;
     }
 
   va_list ap;
@@ -1388,7 +1446,7 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
         }
     }
 
-end:
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return ret;
@@ -1428,8 +1486,15 @@ int settings_iterate(int idx, FAR setting_t *setting)
       return ret;
     }
 
+  if (!g_settings.initialized)
+    {
+      ret = -EACCES;
+      goto errout;
+    }
+
   memcpy(setting, &g_settings.map[idx], sizeof(setting_t));
 
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   if (g_settings.map[idx].type == SETTING_EMPTY)
