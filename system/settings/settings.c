@@ -710,11 +710,6 @@ int settings_init(void)
 {
   pthread_mutexattr_t attr;
 
-  if (g_settings.initialized)
-    {
-      return OK;
-    }
-
   pthread_mutexattr_init(&attr);
   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
