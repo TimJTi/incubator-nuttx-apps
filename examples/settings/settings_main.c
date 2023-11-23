@@ -62,40 +62,12 @@ int settings_main(int argc, FAR char *argv[])
   int                  ret;
   int                  fd;
   enum settings_type_e stype;
-  char                 path[CONFIG_PATH_MAX];
+  char                 text_path[CONFIG_PATH_MAX];
+  char                 bin_path[CONFIG_PATH_MAX];
   const char           teststr[] = "I'm a string";
   int                  testval = 0x5aa5;
   char                 readstr[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE];
-  enum storage_type_e  storage_type = STORAGE_BINARY;
-  bool                 flag_present = false;
   struct stat          sbuf;
-
-  if ((argc < 1) || *argv[1] == 0 || *(argv[1] + 1) == 0)
-    {
-      goto print_help;
-    }
-
-  if (*argv[1] == '-')
-    {
-      flag_present = true;
-      if (*(argv[1] + 1) == 'b')
-        {
-          storage_type = STORAGE_BINARY;
-        }
-      else if (*(argv[1] + 1) == 't')
-        {
-          storage_type = STORAGE_TEXT;
-        }
-      else
-        {
-          goto print_help;
-        }
-    }
-
-  if (flag_present && argc < 2)
-    {
-      goto print_help;
-    }
 
 #ifdef CONFIG_EXAMPLES_SETTINGS_USE_TMPFS
 #  ifndef CONFIG_FS_TMPFS
@@ -115,7 +87,7 @@ int settings_main(int argc, FAR char *argv[])
         }
     }
 
-  strcpy(path, CONFIG_LIBC_TMPDIR);
+  strcpy(bin_path, CONFIG_LIBC_TMPDIR);
 #else
   strcpy(path, CONFIG_EXAMPLES_SETTINGS_EXISTING_STORAGE);
   if (path == NULL)
@@ -125,11 +97,14 @@ int settings_main(int argc, FAR char *argv[])
     }
 #endif
 
-  strcat(path, "/");
-  strcat(path, CONFIG_EXAMPLES_SETTINGS_FILENAME);
+  strcat(bin_path, "/");
+  strcat(bin_path, CONFIG_EXAMPLES_SETTINGS_FILENAME);
+  strcpy(text_path, bin_path);
+  strcat(bin_path, ".bin");
+  strcat(text_path, ".txt");
 
-  printf("Example of settings usage: %s. Path: %s\n",
-         ((storage_type == STORAGE_TEXT) ? "text" : "binary"), path);
+  printf("Example of settings usage to file: %s and %s:",
+          bin_path, text_path);
   printf("--------------------------------------------------------------\n");
 
   ret = settings_init();
@@ -139,11 +114,11 @@ int settings_main(int argc, FAR char *argv[])
       goto end;
     }
 
-  ret = settings_setstorage(path, storage_type);
+  ret = settings_setstorage(bin_path, STORAGE_BINARY);
   if (ret == -ENOENT)
     {
-      printf("No existing storage file found. Creating it.\n");
-      fd = open(path, O_CREAT);
+      printf("No existing binary storage file found. Creating it.\n");
+      fd = open(bin_path, O_CREAT);
       if (fd < 0)
         {
           printf("Failed to create settings file\n");
@@ -159,7 +134,30 @@ int settings_main(int argc, FAR char *argv[])
     }
   else
     {
-      printf("existing settings storage file foung\n");
+      printf("existing bin settings storage file found\n");
+    }
+
+  ret = settings_setstorage(text_path, STORAGE_TEXT);
+  if (ret == -ENOENT)
+    {
+      printf("No existing text storage file found. Creating it.\n");
+      fd = open(text_path, O_CREAT);
+      if (fd < 0)
+        {
+          printf("Failed to create settings file\n");
+          goto end;
+        }
+
+      close(fd);
+    }
+  else if (ret < 0)
+    {
+      printf("settings setstorage failed: %d\n", ret);
+      goto end;
+    }
+  else
+    {
+      printf("existing text settings storage file found\n");
     }
 
   ret = settings_create("v1", SETTING_STRING, "default value");
@@ -266,10 +264,13 @@ int settings_main(int argc, FAR char *argv[])
 
   FAR struct in_addr save_ip;
   FAR struct in_addr load_ip;
-  save_ip.s_addr = HTONL(0xc0a86401);
+  save_ip.s_addr = 0xc0a86401;
 
-  printf("Changing setting to an IP value (s1) with value:0x%08lx\n",
-          save_ip.s_addr);
+  printf("Changing setting to an IP value (s1) with value:%d.%d.%d.%d\n",
+          (int)(save_ip.s_addr >> 24) & 0xff,
+          (int)(save_ip.s_addr >> 16) & 0xff,
+          (int)(save_ip.s_addr >>  8) & 0xff,
+          (int)(save_ip.s_addr >>  0) & 0xff);
   ret = settings_set("s1", SETTING_IP_ADDR, &save_ip);
   if (ret < 0)
     {
@@ -285,21 +286,12 @@ int settings_main(int argc, FAR char *argv[])
     }
 
   printf("Retrieved IP address settings value (s1) with value:0x%08lx\n",
-          NTOHL(load_ip.s_addr));
+          load_ip.s_addr);
 
 end:
 
-  printf("Syncing settings, especially in case of cached saves\n");
+  printf("Syncing settings, especially needed if using cached saves\n");
   settings_sync();
 
   return ret;
-
-print_help:
-  printf("Usage...\n");
-  printf("settings [-b | -t] \n");
-  printf("    -i = use a binary storage file (default)\n");
-  printf("    -t = use a text   storage file\n");
-  printf(" Example:\n");
-  printf("   settings -b\n");
-  return -EINVAL;
 }

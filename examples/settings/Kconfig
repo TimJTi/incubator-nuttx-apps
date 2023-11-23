@@ -53,6 +53,9 @@ endif # EXAMPLES_SETTINGS_USE_OTHER
 
 config EXAMPLES_SETTINGS_FILENAME
 	string "Filename"
-	default "settings.file"
+	default "settings"
+	---help---
+		filename to be used. This append will append .txt and .bin
+		to this name to use/create two settings files.
 
 endif # EXAMPLES_SETTINGS
