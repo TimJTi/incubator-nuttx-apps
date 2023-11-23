@@ -286,13 +286,12 @@ int settings_main(int argc, FAR char *argv[])
 
   printf("Retrieved IP address settings value (s1) with value:0x%08lx\n",
           NTOHL(load_ip.s_addr));
+
 end:
 
-#ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
-  /* Cached saves may not have been written out yet */
+  printf("Syncing settings, especially in case of cached saves\n");
+  settings_sync();
 
-  usleep(2 * 1000 * CONFIG_SYSTEM_SETTINGS_CACHE_TIME_MS);
-#endif
   return ret;
 
 print_help:
