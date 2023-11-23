@@ -567,13 +567,14 @@ static int load(void)
 static int save(void)
 {
   int ret = OK;
+  g_settings.wrpend = true;
 
 #ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
   ret = timer_settime(g_settings.timerid, 0, &g_settings.trigger, NULL);
 #else
   union sigval value =
   {
-    .sival_ptr = &g_settings.wrpend;
+    .sival_ptr = &g_settings.wrpend,
   };
 
   dump_cache(value);
@@ -638,8 +639,6 @@ void dump_cache(union sigval ptr)
       DEBUGASSERT(0);
     }
 
-  while (*wrpend); /* Might be an outstanding save in progress */
-  *wrpend = true;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAX_STORAGES; i++)
     {
       if ((g_settings.store[i].file[0] != '\0') &&
@@ -712,7 +711,7 @@ int settings_init(void)
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
-  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
   pthread_mutex_init(&g_settings.mtx, &attr);
 
@@ -867,12 +866,17 @@ int settings_sync(void)
   load();
 
   h = hash_calc();
-  if (h != g_settings.hash)
+  if ((h != g_settings.hash))// || (g_settings.wrpend))
     {
       g_settings.hash = h;
 
       signotify();
-      save();
+      union sigval value =
+        {
+          .sival_ptr = &g_settings.wrpend,
+        };
+
+      dump_cache(value);
     }
 
   pthread_mutex_unlock(&g_settings.mtx);
@@ -917,12 +921,14 @@ int settings_notify(void)
   DEBUGASSERT(idx < CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS);
   if (idx >= CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS)
     {
-      return -EINVAL;
+      ret = -EINVAL;
+      goto errout;
     }
 
   g_settings.notify[idx].pid = getpid();
   g_settings.notify[idx].signo = CONFIG_SYSTEM_SETTINGS_SIGNO;
 
+errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
   return OK;
