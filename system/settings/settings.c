@@ -719,11 +719,6 @@ static int sanity_check(FAR char *str)
 
 int settings_init(void)
 {
-  if (g_settings.initialized)
-    {
-      return OK;
-    }
-
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
