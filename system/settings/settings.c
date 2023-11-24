@@ -48,7 +48,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
+    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
 #  define TIMER_SIGNAL SIGRTMIN
 #endif
 
@@ -83,7 +84,11 @@ static int      set_float(FAR setting_t *setting, double f);
 static int      get_ip(FAR setting_t *setting, struct in_addr *ip);
 static int      set_ip(FAR setting_t *setting, struct in_addr *ip);
 static int      load(void);
+#ifdef CONFIG_SYSTEM_SETTINGS_FILE_SAVES
 static int      save(void);
+#else
+#  define save()
+#endif
 static void     signotify(void);
 void            dump_cache(union sigval ptr);
 
@@ -91,7 +96,12 @@ void            dump_cache(union sigval ptr);
  * Private Data
  ****************************************************************************/
 
-state_t g_settings;
+state_t g_settings =
+{
+  .initialized = false,
+  .hash        = 0,
+  .wrpend      = false,
+};
 
 /****************************************************************************
  * Private Functions
@@ -563,7 +573,7 @@ static int load(void)
  *   Success or negated failure code
  *
  ****************************************************************************/
-
+#ifdef CONFIG_SYSTEM_SETTINGS_FILE_SAVES
 static int save(void)
 {
   int ret = OK;
@@ -582,6 +592,7 @@ static int save(void)
 
   return ret;
 }
+#endif
 
 /****************************************************************************
  * Name: signotify
@@ -708,6 +719,11 @@ static int sanity_check(FAR char *str)
 
 int settings_init(void)
 {
+  if (g_settings.initialized)
+    {
+      return OK;
+    }
+
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
@@ -715,14 +731,13 @@ int settings_init(void)
   pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
   pthread_mutex_init(&g_settings.mtx, &attr);
 
-  g_settings.hash = 0;
-  g_settings.wrpend    = false;
   memset(g_settings.map, 0, sizeof(g_settings.map));
   memset(g_settings.store, 0, sizeof(g_settings.store));
 
   memset(g_settings.notify, 0, sizeof(g_settings.notify));
 
-#ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
+    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
   memset(&g_settings.sev, 0, sizeof(struct sigevent));
   g_settings.sev.sigev_notify          = SIGEV_THREAD;
   g_settings.sev.sigev_signo           = TIMER_SIGNAL;
@@ -777,7 +792,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       ret = -EACCES;
       goto errout;
     }
-  
+
   while ((idx < CONFIG_SYSTEM_SETTINGS_MAX_STORAGES) &&
          (g_settings.store[idx].file[0] != '\0'))
     {
@@ -932,7 +947,7 @@ int settings_notify(void)
       ret = -EACCES;
       goto errout;
     }
-  
+
   while ((idx < CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS) &&
           g_settings.notify[idx].pid)
     {
@@ -1277,7 +1292,7 @@ int settings_get(FAR char *key, enum settings_type_e type, ...)
       ret = -EACCES;
       goto errout;
     }
-  
+
   ret = get_setting(key, &setting);
   if (ret < 0)
     {
@@ -1444,6 +1459,15 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
           signotify();
           save();
         }
+
+#if 0
+      /* It might help to know the value didn't actually change? */
+
+      else
+        {
+          ret = -EEXIST;
+        }
+#endif
     }
 
 errout:
