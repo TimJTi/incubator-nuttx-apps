@@ -44,6 +44,16 @@ config SYSTEM_SETTINGS_MAX_FILENAME
 	---help---
 		Maximum size of settings filename.
 
+config SYSTEM_SETTINGS_FILE_SAVES
+	bool "File save operation enable"
+	default y
+	---help---
+		If enabled saving to the storage file itself is enabled.
+		
+		This might be disabled if the storage medium is, for example, EEPROM
+		and saving is handled in a special manner once a signal is received
+		notifying the user app that there has been a settings value change.
+
 config SYSTEM_SETTINGS_CACHED_SAVES
 	bool "Cache save operations"
 	default y

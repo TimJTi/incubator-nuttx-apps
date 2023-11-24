@@ -119,7 +119,8 @@ typedef struct
   storage_t         store[CONFIG_SYSTEM_SETTINGS_MAX_STORAGES];
   struct notify_s   notify[CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS];
 
-  #ifdef CONFIG_SYSTEM_SETTINGS_CACHED_SAVES
+  #if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
+      defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
   struct sigevent   sev;
   struct itimerspec trigger;
   timer_t           timerid;
@@ -178,21 +179,17 @@ int settings_setstorage(FAR char * file, enum storage_type_e type);
  * Name: settings_sync
  *
  * Description:
- *    Sets a file to be used as a settings storage.
- *    Except from the first file, if loading the file causes any changes
- *    to the settings, then the new map will be dumped to all files
- *    (effectively it syncs all storages).
+ *    Synchronizes the storage.
  *
  * Input Parameters:
- *    file             - the filename of the storage to use
- *    type             - the type of the storage
+ *    none
  *
  * Returned Value:
  *    Success or negated failure code
  *
  ****************************************************************************/
 
-int settings_notify(void);
+int settings_sync(void);
 
 /****************************************************************************
  * Name: settings_notify
