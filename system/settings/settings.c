@@ -90,7 +90,7 @@ static int      save(void);
 #  define save()
 #endif
 static void     signotify(void);
-void            dump_cache(union sigval value);
+void            dump_cache(union sigval ptr);
 
 /****************************************************************************
  * Private Data
@@ -584,7 +584,7 @@ static int save(void)
 #else
   union sigval value =
   {
-    .sival_int = 0,
+    .sival_ptr = &g_settings.wrpend,
   };
 
   dump_cache(value);
@@ -637,10 +637,10 @@ static void signotify(void)
  *
  ****************************************************************************/
 
-void dump_cache(union sigval value)
+void dump_cache(union sigval ptr)
 {
   int ret = OK;
-  UNUSED(value);
+  bool *wrpend = (bool *)ptr.sival_ptr;
 
   int i;
 
@@ -663,7 +663,7 @@ void dump_cache(union sigval value)
         }
     }
 
-  g_settings.wrpend = false;
+  *wrpend = false;
 
   pthread_mutex_unlock(&g_settings.mtx);
 }
@@ -736,7 +736,7 @@ int settings_init(void)
   memset(&g_settings.sev, 0, sizeof(struct sigevent));
   g_settings.sev.sigev_notify          = SIGEV_THREAD;
   g_settings.sev.sigev_signo           = TIMER_SIGNAL;
-  g_settings.sev.sigev_value.sival_int = 0;
+  g_settings.sev.sigev_value.sival_ptr = &g_settings.wrpend;
   g_settings.sev.sigev_notify_function = dump_cache;
 
   memset(&g_settings.trigger, 0, sizeof(struct itimerspec));
@@ -894,7 +894,7 @@ int settings_sync(void)
     {
       union sigval value =
         {
-          .sival_int = 0,
+          .sival_ptr = &g_settings.wrpend,
         };
 #if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
     defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)      
