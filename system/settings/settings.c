@@ -896,6 +896,7 @@ int settings_sync(void)
         {
           .sival_ptr = &g_settings.wrpend,
         };
+
 #if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
     defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)      
       struct itimerspec trigger =
@@ -903,6 +904,7 @@ int settings_sync(void)
           .it_value.tv_sec  = 0,
           .it_value.tv_nsec = 0,
         };
+
       /* Cancel the timer */
 
       ret = timer_settime(g_settings.timerid, 0, &trigger, NULL);
