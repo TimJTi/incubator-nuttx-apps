@@ -892,14 +892,23 @@ int settings_sync(void)
   h = hash_calc();
   if ((h != g_settings.hash) || (g_settings.wrpend))
     {
-      g_settings.hash = h;
-
-      signotify();
       union sigval value =
         {
           .sival_int = 0,
         };
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
+    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)      
+      struct itimerspec trigger =
+        {
+          .it_value.tv_sec  = 0,
+          .it_value.tv_nsec = 0,
+        };
+      /* Cancel the timer */
 
+      ret = timer_settime(g_settings.timerid, 0, &trigger, NULL);
+#endif
+      g_settings.hash = h;
+      signotify();
       dump_cache(value);
     }
 
