@@ -288,8 +288,18 @@ int settings_main(int argc, FAR char *argv[])
   printf("Retrieved IP address settings value (s1) with value:0x%08lx\n",
           load_ip.s_addr);
 
+  printf("syncing storages\n");
+  ret = settings_sync();
+  if (ret < 0)
+    {
+      printf("Failed to sync storages: %d\n", ret);
+      goto end;
+    }
+
+  printf("waiting for any cached saves to be written\n");
+  while (settings_savepending());
+
 end:
-  sleep(3);
   printf("exiting settings example app\n");
   fflush(stdout);
 

@@ -124,6 +124,22 @@ enum storage_type_e
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: settings_savepending
+ *
+ * Description:
+ *    Check if a save is pending. Useful if cached saves are in play.
+ *
+ * Input Parameters:
+ *    none
+ *
+ * Returned Value:
+ *    whether a save is pending: true or false;
+ *
+ ****************************************************************************/
+
+bool settings_savepending(void);
+
+/****************************************************************************
  * Name: settings_init
  *
  * Description:
