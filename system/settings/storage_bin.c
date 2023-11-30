@@ -168,11 +168,16 @@ abort:
 
 int save_bin(FAR char *file)
 {
-  FAR uint8_t *buffer = malloc(BUFFER_SIZE);
   int count;
   int fd;
   int ret = OK;
+  off_t offset = sizeof(uint16_t) * 2;  /* Valid & count */
+  size_t data_size;
+  size_t rem_data;
+  uint32_t crc;
+  size_t rem_crc;
 
+  FAR uint8_t *buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
     {
       return -ENOMEM;
@@ -201,11 +206,10 @@ int save_bin(FAR char *file)
   *((FAR uint16_t *)buffer) = VALID;
   *(((FAR uint16_t *)buffer) + 1) = count;
 
-  off_t offset = sizeof(uint16_t) * 2;  /* Valid & count */
-  size_t data_size = count *sizeof(setting_t);
-  size_t rem_data = data_size;
-  uint32_t crc = crc32((FAR uint8_t *)map, data_size);
-  size_t rem_crc = sizeof(crc);
+  data_size = count *sizeof(setting_t);
+  rem_data = data_size;
+  crc = crc32((FAR uint8_t *)map, data_size);
+  rem_crc = sizeof(crc);
 
   while ((offset + rem_data + rem_crc) > 0)
     {
