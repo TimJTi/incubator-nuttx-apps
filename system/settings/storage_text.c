@@ -38,7 +38,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 256 /* Note alignment for Flash writes! */
 
 /****************************************************************************
  * Private Types
@@ -63,7 +63,7 @@
  ****************************************************************************/
 
 FAR static setting_t *getsetting(char *key);
-extern state_t g_settings;
+extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 /****************************************************************************
  * Private Data
@@ -307,47 +307,47 @@ int save_text(FAR char *file)
 
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      if (g_settings.map[i].type == SETTING_EMPTY)
+      if (map[i].type == SETTING_EMPTY)
         {
           break;
         }
 
-      switch (g_settings.map[i].type)
+      switch (map[i].type)
         {
           case SETTING_STRING:
             {
-              fprintf(f, "%s=%s\n", g_settings.map[i].key,
-                      g_settings.map[i].s);
+              fprintf(f, "%s=%s\n", map[i].key,
+                      map[i].s);
             }
             break;
 
           case SETTING_INT:
             {
-              fprintf(f, "%s=%d\n", g_settings.map[i].key,
-                      g_settings.map[i].i);
+              fprintf(f, "%s=%d\n", map[i].key,
+                      map[i].i);
             }
             break;
 
           case SETTING_BOOL:
             {
-              fprintf(f, "%s=%s\n", g_settings.map[i].key,
-                      g_settings.map[i].i ?
+              fprintf(f, "%s=%s\n", map[i].key,
+                      map[i].i ?
                       "true" : "false");
             }
             break;
 
           case SETTING_FLOAT:
             {
-              fprintf(f, "%s=%.06f\n", g_settings.map[i].key,
-                      g_settings.map[i].f);
+              fprintf(f, "%s=%.06f\n", map[i].key,
+                      map[i].f);
             }
             break;
 
           case SETTING_IP_ADDR:
             {
               char buffer[20];
-              inet_ntop(AF_INET, &g_settings.map[i].ip, buffer, 20);
-              fprintf(f, "%s=%s\n", g_settings.map[i].key, buffer);
+              inet_ntop(AF_INET, &map[i].ip, buffer, 20);
+              fprintf(f, "%s=%s\n", map[i].key, buffer);
             }
             break;
 
@@ -396,7 +396,7 @@ FAR setting_t *getsetting(char *key)
 
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      setting = &g_settings.map[i];
+      setting = &map[i];
 
       if (strcmp(key, setting->key) == 0)
         {

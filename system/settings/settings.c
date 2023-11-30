@@ -96,12 +96,23 @@ void            dump_cache(union sigval ptr);
  * Private Data
  ****************************************************************************/
 
-state_t g_settings =
+static struct
 {
-  .initialized = false,
-  .hash        = 0,
-  .wrpend      = false,
-};
+  pthread_mutex_t   mtx;
+  uint32_t          hash;
+  bool              wrpend;
+  bool              initialized;
+  storage_t         store[CONFIG_SYSTEM_SETTINGS_MAX_STORAGES];
+  struct notify_s   notify[CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS];
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
+    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
+  struct sigevent   sev;
+  struct itimerspec trigger;
+  timer_t           timerid;
+#endif
+} g_settings;
+
+setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 /****************************************************************************
  * Private Functions
@@ -122,7 +133,7 @@ state_t g_settings =
 
 static uint32_t hash_calc(void)
 {
-  return crc32((FAR uint8_t *)g_settings.map, sizeof(g_settings.map));
+  return crc32((FAR uint8_t *)map, sizeof(map));
 }
 
 /****************************************************************************
@@ -149,15 +160,15 @@ static int get_setting(FAR char *key, FAR setting_t **setting)
 
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      if (g_settings.map[i].type == SETTING_EMPTY)
+      if (map[i].type == SETTING_EMPTY)
         {
           ret = -ENOENT;
           goto exit;
         }
 
-      if (strcmp(g_settings.map[i].key, key) == 0)
+      if (strcmp(map[i].key, key) == 0)
         {
-          *setting = &g_settings.map[i];
+          *setting = &map[i];
           goto exit;
         }
     }
@@ -640,7 +651,7 @@ static void signotify(void)
 void dump_cache(union sigval ptr)
 {
   int ret = OK;
-  bool *wrpend = (bool *)ptr.sival_ptr;
+  FAR bool *wrpend = (bool *)ptr.sival_ptr;
 
   int i;
 
@@ -726,9 +737,8 @@ int settings_init(void)
   pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
   pthread_mutex_init(&g_settings.mtx, &attr);
 
-  memset(g_settings.map, 0, sizeof(g_settings.map));
+  memset(map, 0, sizeof(map));
   memset(g_settings.store, 0, sizeof(g_settings.store));
-
   memset(g_settings.notify, 0, sizeof(g_settings.notify));
 
 #if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
@@ -747,6 +757,8 @@ int settings_init(void)
   timer_create(CLOCK_REALTIME, &g_settings.sev, &g_settings.timerid);
 #endif
   g_settings.initialized = true;
+  g_settings.hash = 0;
+  g_settings.wrpend = false;
 
   return OK;
 }
@@ -890,17 +902,11 @@ int settings_sync(void)
   load();
 
   h = hash_calc();
-  if ((h != g_settings.hash) || (g_settings.wrpend))
+  if (h != g_settings.hash)
     {
       g_settings.hash = h;
-
       signotify();
-      union sigval value =
-        {
-          .sival_ptr = &g_settings.wrpend,
-        };
-
-      dump_cache(value);
+      save();
     }
 
 errout:
@@ -1035,7 +1041,7 @@ int settings_clear(void)
       goto errout;
     }
 
-  memset(g_settings.map, 0, sizeof(g_settings.map));
+  memset(map, 0, sizeof(map));
   g_settings.hash = 0;
 
   save();
@@ -1111,18 +1117,18 @@ int settings_create(FAR char *key, enum settings_type_e type, ...)
 
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      if (strcmp(key, g_settings.map[i].key) == 0)
+      if (strcmp(key, map[i].key) == 0)
         {
-          setting = &g_settings.map[i];
+          setting = &map[i];
 
           /* We found a setting with this key name */
 
           goto errout;
         }
 
-      if (g_settings.map[i].type == SETTING_EMPTY)
+      if (map[i].type == SETTING_EMPTY)
         {
-          setting = &g_settings.map[i];
+          setting = &map[i];
 
           /* This setting is empty/unused - we can use it */
 
@@ -1511,12 +1517,12 @@ int settings_iterate(int idx, FAR setting_t *setting)
       goto errout;
     }
 
-  memcpy(setting, &g_settings.map[idx], sizeof(setting_t));
+  memcpy(setting, &map[idx], sizeof(setting_t));
 
 errout:
   pthread_mutex_unlock(&g_settings.mtx);
 
-  if (g_settings.map[idx].type == SETTING_EMPTY)
+  if (map[idx].type == SETTING_EMPTY)
     {
       return -ENOENT;
     }
