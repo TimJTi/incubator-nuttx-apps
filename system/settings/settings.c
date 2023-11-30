@@ -641,7 +641,6 @@ void dump_cache(union sigval ptr)
 {
   int ret = OK;
   bool *wrpend = (bool *)ptr.sival_ptr;
-
   int i;
 
   ret = pthread_mutex_lock(&g_settings.mtx);
@@ -1370,9 +1369,7 @@ errout:
 int settings_set(FAR char *key, enum settings_type_e type, ...)
 {
   int ret;
-  int i;
   FAR setting_t *setting = NULL;
-  uint32_t h;
 
   DEBUGASSERT(type != SETTING_EMPTY);
   DEBUGASSERT(key[0] != '\0');
@@ -1409,14 +1406,14 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
 
     case SETTING_INT:
       {
-        i = va_arg(ap, int);
+        int i = va_arg(ap, int);
         ret = set_int(setting, i);
       }
       break;
 
     case SETTING_BOOL:
       {
-        i = va_arg(ap, int);
+        int i = va_arg(ap, int);
         ret = set_bool(setting, i);
       }
       break;
@@ -1446,6 +1443,7 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
 
   if (ret >= 0)
     {
+      uint32_t h;
       h = hash_calc();
       if (h != g_settings.hash)
         {

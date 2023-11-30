@@ -93,7 +93,7 @@ int load_bin(FAR char *file)
   int fd;
   int i;
   int ret = OK;
-  uint16_t valid;
+  uint16_t valid = 0;
   uint16_t count;
   uint32_t calc_crc = 0;
   uint32_t exp_crc = 0;
@@ -106,7 +106,6 @@ int load_bin(FAR char *file)
       return -ENOENT;
     }
 
-  valid = 0;
   read(fd, &valid, sizeof(uint16_t));
 
   if (valid != VALID)
@@ -173,6 +172,12 @@ int save_bin(FAR char *file)
   int count;
   int fd;
   int ret = OK;
+  int i;
+  off_t offset = sizeof(uint16_t) * 2;
+  size_t data_size;
+  size_t rem_data;
+  uint32_t crc;
+  size_t rem_crc;
 
   if (buffer == NULL)
     {
@@ -180,7 +185,6 @@ int save_bin(FAR char *file)
     }
 
   count = 0;
-  int i;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
       if (g_settings.map[i].type == SETTING_EMPTY)
@@ -202,22 +206,23 @@ int save_bin(FAR char *file)
   *((FAR uint16_t *)buffer) = VALID;
   *(((FAR uint16_t *)buffer) + 1) = count;
 
-  off_t offset = sizeof(uint16_t) * 2;  /* Valid & count */
-  size_t data_size = count *sizeof(setting_t);
-  size_t rem_data = data_size;
-  uint32_t crc = crc32((FAR uint8_t *)g_settings.map, data_size);
-  size_t rem_crc = sizeof(crc);
+
+  data_size = count *sizeof(setting_t);
+  rem_data = data_size;
+  crc = crc32((FAR uint8_t *)g_settings.map, data_size);
+  rem_crc = sizeof(crc);
 
   while ((offset + rem_data + rem_crc) > 0)
     {
+      size_t j;
       size_t to_write = ((offset + rem_data) > BUFFER_SIZE) ?
                          (size_t)(BUFFER_SIZE - offset) : rem_data;
       memcpy((buffer + offset), (((FAR uint8_t *)g_settings.map) +
              (data_size - rem_data)), to_write);
 
-      size_t j;
       for (j = (to_write + offset);
-           (j < BUFFER_SIZE) && (rem_crc > 0); j++, rem_crc--)
+          (j < BUFFER_SIZE) && (rem_crc > 0);
+           j++, rem_crc--)
         {
           off_t crc_byte = (off_t)(sizeof(crc) - rem_crc);
           buffer[j] = (crc >> (8 *crc_byte)) & 0xff;
@@ -228,7 +233,6 @@ int save_bin(FAR char *file)
       offset = 0;
     }
 
-  sleep(1);
   close(fd);
 
 abort:
