@@ -21,7 +21,7 @@
 include $(APPDIR)/Make.defs
 
 ifneq ($CONFIG_SYSTEM_UTILS_SETTINGS,)
-CSRCS += settings.c storage_bin.c storage_text.c
+CSRCS += settings.c storage_bin.c storage_text.c storage_eeprom.c
 endif
 
 include $(APPDIR)/Application.mk
