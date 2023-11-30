@@ -111,8 +111,9 @@ struct notify_s
 
 enum storage_type_e
 {
-  STORAGE_BINARY  = 0,
-  STORAGE_TEXT    = 1,
+  STORAGE_BINARY = 0,
+  STORAGE_TEXT,
+  STORAGE_EEPROM,
 };
 
 /****************************************************************************

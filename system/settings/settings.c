@@ -840,6 +840,13 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       }
       break;
 
+    case STORAGE_EEPROM:
+      {
+        storage->load_fn = load_bin;
+        storage->save_fn = save_eeprom;
+      }
+      break;
+
     default:
       {
         DEBUGASSERT(0);
