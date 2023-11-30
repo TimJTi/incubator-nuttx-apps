@@ -63,8 +63,7 @@
  ****************************************************************************/
 
 FAR static setting_t *getsetting(char *key);
-
-extern state_t g_settings;
+extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 /****************************************************************************
  * Private Data
@@ -183,7 +182,7 @@ int save_bin(FAR char *file)
   int i;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      if (g_settings.map[i].type == SETTING_EMPTY)
+      if (map[i].type == SETTING_EMPTY)
         {
           break;
         }
@@ -205,14 +204,14 @@ int save_bin(FAR char *file)
   off_t offset = sizeof(uint16_t) * 2;  /* Valid & count */
   size_t data_size = count *sizeof(setting_t);
   size_t rem_data = data_size;
-  uint32_t crc = crc32((FAR uint8_t *)g_settings.map, data_size);
+  uint32_t crc = crc32((FAR uint8_t *)map, data_size);
   size_t rem_crc = sizeof(crc);
 
   while ((offset + rem_data + rem_crc) > 0)
     {
       size_t to_write = ((offset + rem_data) > BUFFER_SIZE) ?
                          (size_t)(BUFFER_SIZE - offset) : rem_data;
-      memcpy((buffer + offset), (((FAR uint8_t *)g_settings.map) +
+      memcpy((buffer + offset), (((FAR uint8_t *)map) +
              (data_size - rem_data)), to_write);
 
       size_t j;
@@ -228,7 +227,7 @@ int save_bin(FAR char *file)
       offset = 0;
     }
 
-  sleep(1);
+  sleep(2);
   close(fd);
 
 abort:
@@ -257,7 +256,7 @@ FAR setting_t *getsetting(FAR char *key)
 
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
-      FAR setting_t *setting = &g_settings.map[i];
+      FAR setting_t *setting = &map[i];
 
       if (strcmp(key, setting->key) == 0)
         {

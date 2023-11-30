@@ -289,9 +289,9 @@ int settings_main(int argc, FAR char *argv[])
           load_ip.s_addr);
 
 end:
-
-  printf("Syncing settings, especially needed if using cached saves\n");
-  settings_sync();
+  sleep(3);
+  printf("exiting settings example app\n");
+  fflush(stdout);
 
   return ret;
 }

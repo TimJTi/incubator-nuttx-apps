@@ -109,24 +109,6 @@ struct notify_s
   uint8_t signo;
 };
 
-typedef struct
-{
-  pthread_mutex_t   mtx;
-  uint32_t          hash;
-  bool              wrpend;
-  bool              initialized;
-  setting_t         map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
-  storage_t         store[CONFIG_SYSTEM_SETTINGS_MAX_STORAGES];
-  struct notify_s   notify[CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS];
-
-  #if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
-      defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
-  struct sigevent   sev;
-  struct itimerspec trigger;
-  timer_t           timerid;
-  #endif
-} state_t;
-
 enum storage_type_e
 {
   STORAGE_BINARY  = 0,
