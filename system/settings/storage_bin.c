@@ -234,6 +234,7 @@ int save_bin(FAR char *file)
     }
 
   close(fd);
+  sleep(1);
 
 abort:
   free(buffer);
