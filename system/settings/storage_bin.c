@@ -89,14 +89,14 @@ extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 int load_bin(FAR char *file)
 {
-  int fd;
-  int i;
-  int ret = OK;
-  uint16_t valid;
-  uint16_t count;
-  uint32_t calc_crc = 0;
-  uint32_t exp_crc = 0;
-  setting_t setting;
+  int           fd;
+  int           i;
+  int           ret = OK;
+  uint16_t      valid;
+  uint16_t      count;
+  uint32_t      calc_crc = 0;
+  uint32_t      exp_crc = 0;
+  setting_t     setting;
   FAR setting_t *slot;
 
   fd = open(file, O_RDONLY);
@@ -128,7 +128,7 @@ int load_bin(FAR char *file)
 
   if (calc_crc != exp_crc)
     {
-      ret = -EIO;
+      ret = -EBADMSG;
       goto abort;
     }
 
@@ -168,16 +168,16 @@ abort:
 
 int save_bin(FAR char *file)
 {
-  int count;
-  int fd;
-  int ret = OK;
-  off_t offset = sizeof(uint16_t) * 2;  /* Valid & count */
-  size_t data_size;
-  size_t rem_data;
+  int      count;
+  int      fd;
+  int      ret = OK;
+  off_t    offset = sizeof(uint16_t) * 2;  /* Valid & count */
+  size_t   data_size;
+  size_t   rem_data;
   uint32_t crc;
-  size_t rem_crc;
-
+  size_t   rem_crc;
   FAR uint8_t *buffer = malloc(BUFFER_SIZE);
+
   if (buffer == NULL)
     {
       return -ENOMEM;
@@ -223,7 +223,7 @@ int save_bin(FAR char *file)
            (j < BUFFER_SIZE) && (rem_crc > 0); j++, rem_crc--)
         {
           off_t crc_byte = (off_t)(sizeof(crc) - rem_crc);
-          buffer[j] = (crc >> (8 *crc_byte)) & 0xff;
+          buffer[j] = (crc >> (8 * crc_byte)) & 0xff;
         }
 
       write(fd, buffer, BUFFER_SIZE);
@@ -231,7 +231,6 @@ int save_bin(FAR char *file)
       offset = 0;
     }
 
-  sleep(2);
   close(fd);
 
 abort:

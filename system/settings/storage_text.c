@@ -89,15 +89,14 @@ extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 int load_text(FAR char *file)
 {
-  int ret = OK;
-  FAR FILE *f;
-  FAR char *eq;
-  FAR char *key;
-  FAR char *val;
-  FAR char *backup_file;
-  FAR char *buffer;
+  int           ret = OK;
+  FAR FILE      *f;
+  FAR char      *eq;
+  FAR char      *key;
+  FAR char      *val;
+  FAR char      *backup_file;
+  FAR char      *buffer;
   FAR setting_t *setting;
-  int i;
 
   /* Check that the file exists */
 
@@ -141,6 +140,7 @@ int load_text(FAR char *file)
 
   while (fgets(buffer, BUFFER_SIZE, f))
     {
+      int i;
       /* Remove any line terminators */
 
       for (i = ((int)strlen(buffer) - 1); i > 0; i--)
@@ -285,10 +285,10 @@ abort:
 
 int save_text(FAR char *file)
 {
-  int ret = OK;
+  int      ret = OK;
   FAR char *backup_file = malloc(strlen(file) + 2);
   FAR FILE *f;
-  int i;
+  int      i;
 
   if (backup_file == NULL)
     {
