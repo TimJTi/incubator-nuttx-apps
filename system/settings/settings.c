@@ -48,8 +48,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
-    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES)
 #  define TIMER_SIGNAL SIGRTMIN
 #endif
 
@@ -84,11 +83,7 @@ static int      set_float(FAR setting_t *setting, double f);
 static int      get_ip(FAR setting_t *setting, struct in_addr *ip);
 static int      set_ip(FAR setting_t *setting, struct in_addr *ip);
 static int      load(void);
-#ifdef CONFIG_SYSTEM_SETTINGS_FILE_SAVES
 static int      save(void);
-#else
-#  define save()
-#endif
 static void     signotify(void);
 void            dump_cache(union sigval ptr);
 
@@ -104,8 +99,7 @@ static struct
   bool              initialized;
   storage_t         store[CONFIG_SYSTEM_SETTINGS_MAX_STORAGES];
   struct notify_s   notify[CONFIG_SYSTEM_SETTINGS_MAX_SIGNALS];
-#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
-    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES)
   struct sigevent   sev;
   struct itimerspec trigger;
   timer_t           timerid;
@@ -584,7 +578,6 @@ static int load(void)
  *   Success or negated failure code
  *
  ****************************************************************************/
-#ifdef CONFIG_SYSTEM_SETTINGS_FILE_SAVES
 static int save(void)
 {
   int ret = OK;
@@ -603,7 +596,6 @@ static int save(void)
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: signotify
@@ -741,8 +733,7 @@ int settings_init(void)
   memset(g_settings.store, 0, sizeof(g_settings.store));
   memset(g_settings.notify, 0, sizeof(g_settings.notify));
 
-#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES) && \
-    defined(CONFIG_SYSTEM_SETTINGS_FILE_SAVES)
+#if defined(CONFIG_SYSTEM_SETTINGS_CACHED_SAVES)
   memset(&g_settings.sev, 0, sizeof(struct sigevent));
   g_settings.sev.sigev_notify          = SIGEV_THREAD;
   g_settings.sev.sigev_signo           = TIMER_SIGNAL;
