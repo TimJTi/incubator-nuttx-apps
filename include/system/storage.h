@@ -53,5 +53,10 @@ int save_text(FAR char * file);
 int load_bin(FAR char * file);
 int save_bin(FAR char * file);
 
+/* EEPROM storage. */
+
+int load_eeprom(FAR char * file);
+int save_eeprom(FAR char * file);
+
 #endif /* SETTINGS_STORAGE_H_*/
 

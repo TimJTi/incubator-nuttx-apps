@@ -842,7 +842,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
 
     case STORAGE_EEPROM:
       {
-        storage->load_fn = load_bin;
+        storage->load_fn = load_eeprom;
         storage->save_fn = save_eeprom;
       }
       break;
@@ -1552,6 +1552,6 @@ errout:
  ****************************************************************************/
 
 bool settings_savepending(void)
-  {
-    return g_settings.wrpend;
-  }
+{
+  return g_settings.wrpend;
+}
