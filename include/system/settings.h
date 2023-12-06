@@ -92,7 +92,7 @@ typedef struct
     double f;
     char s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE];
     struct in_addr ip;
-  };
+  } val;
 } setting_t;
 
 typedef struct

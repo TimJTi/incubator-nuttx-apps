@@ -192,14 +192,14 @@ int load_text(FAR char *file)
               /* It's a boolean */
 
               setting->type = SETTING_BOOL;
-              setting->i = 1;
+              setting->val.i = 1;
             }
           else if (strcasecmp(val, "false") == 0)
             {
               /* It's a boolean */
 
               setting->type = SETTING_BOOL;
-              setting->i = 0;
+              setting->val.i = 0;
             }
           else
             {
@@ -211,8 +211,8 @@ int load_text(FAR char *file)
                 }
 
               setting->type = SETTING_STRING;
-              strncpy(setting->s, val, CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
-              setting->s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE - 1] = '\0';
+              strncpy(setting->val.s, val, CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
+              setting->val.s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE - 1] = '\0';
             }
         }
       else
@@ -230,7 +230,7 @@ int load_text(FAR char *file)
                   if (sscanf(val, "%lf", &d) == 1)
                     {
                       setting->type = SETTING_FLOAT;
-                      setting->f = d;
+                      setting->val.f = d;
                     }
                 }
               else if (i == 3)
@@ -238,7 +238,7 @@ int load_text(FAR char *file)
                   /* It's an IP address */
 
                   setting->type = SETTING_IP_ADDR;
-                  inet_pton(AF_INET, val, &setting->ip);
+                  inet_pton(AF_INET, val, &setting->val.ip);
                 }
             }
           else
@@ -249,7 +249,7 @@ int load_text(FAR char *file)
               if (sscanf(val, "%d", &i) == 1)
                 {
                   setting->type = SETTING_INT;
-                  setting->i = i;
+                  setting->val.i = i;
                 }
             }
         }
@@ -318,21 +318,21 @@ int save_text(FAR char *file)
           case SETTING_STRING:
             {
               fprintf(f, "%s=%s\n", map[i].key,
-                      map[i].s);
+                      map[i].val.s);
             }
             break;
 
           case SETTING_INT:
             {
               fprintf(f, "%s=%d\n", map[i].key,
-                      map[i].i);
+                      map[i].val.i);
             }
             break;
 
           case SETTING_BOOL:
             {
               fprintf(f, "%s=%s\n", map[i].key,
-                      map[i].i ?
+                      map[i].val.i ?
                       "true" : "false");
             }
             break;
@@ -340,14 +340,14 @@ int save_text(FAR char *file)
           case SETTING_FLOAT:
             {
               fprintf(f, "%s=%.06f\n", map[i].key,
-                      map[i].f);
+                      map[i].val.f);
             }
             break;
 
           case SETTING_IP_ADDR:
             {
               char buffer[20];
-              inet_ntop(AF_INET, &map[i].ip, buffer, 20);
+              inet_ntop(AF_INET, &map[i].val.ip, buffer, 20);
               fprintf(f, "%s=%s\n", map[i].key, buffer);
             }
             break;
