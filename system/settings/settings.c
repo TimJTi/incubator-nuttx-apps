@@ -196,7 +196,7 @@ static size_t get_string(FAR setting_t *setting, FAR char *buffer,
 
   if (setting->type == SETTING_STRING)
     {
-      FAR const char *s = setting->s;
+      FAR const char *s = setting->val.s;
       size_t len = strlen(s);
 
       DEBUGASSERT(len < size);
@@ -214,7 +214,7 @@ static size_t get_string(FAR setting_t *setting, FAR char *buffer,
     {
       DEBUGASSERT(INET_ADDRSTRLEN < size);
 
-      inet_ntop(AF_INET, &setting->ip, buffer, size);
+      inet_ntop(AF_INET, &setting->val.ip, buffer, size);
       buffer[size - 1] = '\0';
 
       return strlen(buffer);
@@ -260,8 +260,8 @@ static int set_string(FAR setting_t *setting, FAR char *str)
     }
 
   setting->type = SETTING_STRING;
-  strncpy(setting->s, str, CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
-  setting->s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE - 1] = '\0';
+  strncpy(setting->val.s, str, CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
+  setting->val.s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE - 1] = '\0';
 
   return OK;
 }
@@ -289,15 +289,15 @@ static int get_int(FAR setting_t *setting, FAR int *i)
 
   if (setting->type == SETTING_INT)
     {
-      *i = setting->i;
+      *i = setting->val.i;
     }
   else if (setting->type == SETTING_BOOL)
     {
-      *i = !!setting->i;
+      *i = !!setting->val.i;
     }
   else if (setting->type == SETTING_FLOAT)
     {
-      *i = (int)setting->f;
+      *i = (int)setting->val.f;
     }
   else
     {
@@ -333,7 +333,7 @@ static int set_int(FAR setting_t *setting, int i)
     }
 
   setting->type = SETTING_INT;
-  setting->i = i;
+  setting->val.i = i;
 
   return OK;
 }
@@ -360,7 +360,7 @@ static int get_bool(FAR setting_t *setting, FAR int *i)
 
   if ((setting->type == SETTING_INT) || (setting->type == SETTING_BOOL))
     {
-      *i = !!setting->i;
+      *i = !!setting->val.i;
     }
   else
     {
@@ -395,7 +395,7 @@ static int set_bool(FAR setting_t *setting, int i)
     }
 
   setting->type = SETTING_BOOL;
-  setting->i = !!i;
+  setting->val.i = !!i;
 
   return OK;
 }
@@ -422,11 +422,11 @@ static int get_float(FAR setting_t *setting, FAR double *f)
 
   if (setting->type == SETTING_FLOAT)
     {
-      *f = setting->f;
+      *f = setting->val.f;
     }
   else if (setting->type == SETTING_INT)
     {
-      *f = (double)setting->i;
+      *f = (double)setting->val.i;
     }
   else
     {
@@ -461,7 +461,7 @@ static int set_float(FAR setting_t *setting, double f)
     }
 
   setting->type = SETTING_FLOAT;
-  setting->f = f;
+  setting->val.f = f;
 
   return OK;
 }
@@ -490,11 +490,11 @@ static int get_ip(FAR setting_t *setting, FAR struct in_addr *ip)
 
   if (setting->type == SETTING_IP_ADDR)
     {
-      memcpy(ip, &setting->ip, sizeof(struct in_addr));
+      memcpy(ip, &setting->val.ip, sizeof(struct in_addr));
     }
   else if (setting->type == SETTING_STRING)
     {
-      ret = inet_pton(AF_INET, setting->s, ip);
+      ret = inet_pton(AF_INET, setting->val.s, ip);
     }
 
   return ret;
@@ -525,7 +525,7 @@ static int set_ip(FAR setting_t *setting, FAR struct in_addr *ip)
     }
 
   setting->type = SETTING_IP_ADDR;
-  memcpy(&setting->ip, ip, sizeof(struct in_addr));
+  memcpy(&setting->val.ip, ip, sizeof(struct in_addr));
 
   return OK;
 }
