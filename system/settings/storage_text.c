@@ -141,6 +141,7 @@ int load_text(FAR char *file)
   while (fgets(buffer, BUFFER_SIZE, f))
     {
       int i;
+
       /* Remove any line terminators */
 
       for (i = ((int)strlen(buffer) - 1); i > 0; i--)

@@ -578,6 +578,7 @@ static int load(void)
  *   Success or negated failure code
  *
  ****************************************************************************/
+
 static int save(void)
 {
   int ret = OK;
