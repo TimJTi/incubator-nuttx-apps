@@ -110,6 +110,7 @@ int load_eeprom(FAR char *file)
                             calc_crc);
     }
 
+  read(fd, &exp_crc, sizeof(uint32_t));
   if (calc_crc != exp_crc)
     {
       ret = -EBADMSG;
@@ -141,6 +142,11 @@ abort:
  *
  * Description:
  *    Saves binary data to an EEPROM storage file.
+ *    The first two stored values are:
+ *      1) "valid" - set to a "magic" number when store is valid
+ *      2) "count" - the number of settings in the store
+ *    At the end of the store a crc is saved of all settings data (excluding
+ *    "valid and "count")
  *
  * Input Parameters:
  *    file             - the filename of the storage to use
@@ -152,27 +158,19 @@ abort:
 
 int save_eeprom(FAR char *file)
 {
-  uint16_t      valid;
-  uint16_t      count;
+  uint16_t      valid = 0;
+  uint16_t      count = 0;
   uint16_t      eeprom_cnt;
   int           fd;
   int           ret = OK;
   int           i;
-  uint32_t      new_crc   = 0;
-  uint32_t      old_crc   = 0;
+  uint32_t      crc = 0;
   setting_t     old_setting;
   FAR setting_t new_setting;
   off_t         offset;
-  FAR uint8_t   *buffer = malloc(BUFFER_SIZE);
-
-  if (buffer == NULL)
-    {
-      return -ENOMEM;
-    }
 
   /* How many settings do we have? */
 
-  count = 0;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
       if (map[i].type == SETTING_EMPTY)
@@ -187,36 +185,12 @@ int save_eeprom(FAR char *file)
   if (fd < 0)
     {
       ret = -ENODEV;
-      goto abort;
-    }
-
-  if (count == 0)
-    {
-      /* nothing stored yet */
-
-      valid = VALID;
-      write(fd, &valid, sizeof(valid));
-      goto abort_withfd;
+      return ret;
     }
 
   read(fd, &valid, sizeof(valid));
-
-  if (valid != VALID)
-    {
-      ret = -EBADMSG;
-      goto abort_withfd; /* Just exit - the settings aren't valid */
-    }
-
+  eeprom_cnt = 0;
   read(fd, &eeprom_cnt, sizeof(uint16_t));
-  if (count != eeprom_cnt)
-    {
-      offset = sizeof(valid);
-      lseek(fd, offset, SEEK_SET);
-      write(fd, &count, sizeof(count));
-    }
-
-  offset = sizeof(valid) + sizeof(eeprom_cnt);
-  lseek(fd, offset, SEEK_SET); /* Make sure we're at start of settings */
 
   for (i = 0; i < count; i++)
     {
@@ -224,28 +198,39 @@ int save_eeprom(FAR char *file)
       lseek(fd, offset, SEEK_SET);
       read(fd, &old_setting, sizeof(setting_t));
       new_setting = map[i];
-      new_crc = crc32((FAR uint8_t *)&new_setting, sizeof(setting_t));
-      old_crc = crc32((FAR uint8_t *)&old_setting, sizeof(setting_t));
-      if (new_crc == old_crc)
+      if (crc32((FAR uint8_t *)&new_setting, sizeof(setting_t)) !=
+          crc32((FAR uint8_t *)&old_setting, sizeof(setting_t)))
         {
-          continue;
+          /* Only write the value if changed */
+
+          lseek(fd, offset, SEEK_SET);
+          write(fd, &new_setting, sizeof(setting_t));
         }
 
-      /* Write the changed value */
-
-      lseek(fd, offset, SEEK_SET);
-      write(fd, &new_setting, sizeof(setting_t));
+      crc = crc32part((FAR uint8_t *)&new_setting, sizeof(setting_t), crc);
     }
 
-  /* append crc */
+  write(fd, &crc, sizeof(crc));
 
-  new_crc = crc32((FAR uint8_t *)map, (count * sizeof(setting_t)));
-  write(fd, &new_crc, sizeof(new_crc));
+  offset = 0;
+  if (valid != VALID)
+    {
+      lseek(fd, offset, SEEK_SET);
+      valid = VALID;
+      write(fd, &valid, sizeof(valid));
+    }
+  else
+    {
+      offset += sizeof(valid);
+      lseek(fd, offset, SEEK_SET);
+    }
 
-abort_withfd:
+  if (eeprom_cnt != count)
+    {
+      write(fd, &count, sizeof(count));
+    }
+
   close(fd);
-abort:
-  free(buffer);
 
   return ret;
 }
