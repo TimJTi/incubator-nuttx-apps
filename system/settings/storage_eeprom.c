@@ -19,6 +19,20 @@
  ****************************************************************************/
 
 /****************************************************************************
+*
+* The EEPROM storage is similar to the binary type, but only saves out values
+* if they've actually changed, to maximise device life.
+*
+* It can, of course, be used with other storage media types that have limited
+* write cycle capabilities.
+*
+* RE-VISIT IN FUTURE - This could be enhanced by allowing for variable
+* storage sizes, but gets complicated if the settings type - and hence size -
+* changes as settings after the saved storage will need to move/change.
+*
+*****************************************************************************/
+
+/****************************************************************************
  * Included Files
  ****************************************************************************/
 
@@ -36,9 +50,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define VALID          0x600d
-#define BUFFER_SIZE    (sizeof(setting_t)) /* just one setting */
 
 /****************************************************************************
  * Private Types
