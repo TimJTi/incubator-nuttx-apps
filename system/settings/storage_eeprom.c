@@ -381,7 +381,6 @@ int save_eeprom(FAR char *file)
 
   used_storage += sizeof(valid) + sizeof(eeprom_cnt) + sizeof(crc);
 
-exit:
   close(fd);
 
   return ret;

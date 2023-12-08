@@ -372,7 +372,7 @@ int settings_iterate(int idx, FAR setting_t *setting);
  *
  ****************************************************************************/
 
-int settings_usedsize(storage_used_t *used);
+int settings_usedsize(FAR storage_used_t *used);
 
 #endif /* UTILS_SETTINGS_H_ */
 

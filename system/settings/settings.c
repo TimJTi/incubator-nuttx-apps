@@ -1666,7 +1666,21 @@ bool settings_savepending(void)
   return g_settings.wrpend;
 }
 
-int settings_usedsize(storage_used_t *used)
+/****************************************************************************
+ * Name: settings_usedsize
+ *
+ * Description:
+ *    Returns the total storage size used (in bytes).
+ *
+ * Input Parameters:
+ *    used      - pointer to struct to return used size of a given storage
+ *
+ * Returned Value:
+ *    Success or negated failure code
+ *
+ ****************************************************************************/
+
+int settings_usedsize(FAR storage_used_t *used)
 {
   int ret;
 
@@ -1677,11 +1691,19 @@ int settings_usedsize(storage_used_t *used)
       return -ENOENT;
     }
 
+  ret = pthread_mutex_lock(&g_settings.mtx);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  used->size = 0;
   if ((g_settings.store[used->store_num].file[0] != '\0') &&
        g_settings.store[used->store_num].size_fn)
     {
       ret = g_settings.store[used->store_num].size_fn(used);
     }
 
+  pthread_mutex_unlock(&g_settings.mtx);
   return ret;
 }
