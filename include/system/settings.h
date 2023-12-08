@@ -77,12 +77,18 @@
 enum settings_type_e
 {
   SETTING_EMPTY   = 0,
-  SETTING_INT     = 1,
-  SETTING_BOOL    = 2,
-  SETTING_FLOAT   = 3,
-  SETTING_STRING  = 4,
-  SETTING_IP_ADDR = 5,
+  SETTING_INT,        /* INT32 assumed */
+  SETTING_BOOL,
+  SETTING_FLOAT,
+  SETTING_STRING,
+  SETTING_IP_ADDR,
 };
+
+typedef struct
+{
+  int    store_num;
+  size_t size;
+} storage_used_t;
 
 typedef struct
 {
@@ -103,6 +109,7 @@ typedef struct
 
   int (*load_fn)(FAR char *file);
   int (*save_fn)(FAR char *file);
+  int (*size_fn)(FAR storage_used_t *used);
 } storage_t;
 
 struct notify_s
@@ -174,7 +181,7 @@ int settings_init(void);
  *
  ****************************************************************************/
 
-int settings_setstorage(FAR char * file, enum storage_type_e type);
+int settings_setstorage(FAR char *file, enum storage_type_e type);
 
 /****************************************************************************
  * Name: settings_sync
@@ -277,7 +284,7 @@ int settings_clear(void);
  *
  ****************************************************************************/
 
-int settings_create(FAR char * key, enum settings_type_e type, ...);
+int settings_create(FAR char *key, enum settings_type_e type, ...);
 
 /****************************************************************************
  * Name: settings_type
@@ -294,7 +301,7 @@ int settings_create(FAR char * key, enum settings_type_e type, ...);
  *
  ****************************************************************************/
 
-int settings_type(FAR char * key, FAR enum settings_type_e * stype);
+int settings_type(FAR char *key, FAR enum settings_type_e *stype);
 
 /****************************************************************************
  * Name: settings_get
@@ -312,7 +319,7 @@ int settings_type(FAR char * key, FAR enum settings_type_e * stype);
  *
  ****************************************************************************/
 
-int settings_get(FAR char * key, FAR enum settings_type_e type, ...);
+int settings_get(FAR char *key, FAR enum settings_type_e type, ...);
 
 /****************************************************************************
  * Name: settings_set
@@ -330,7 +337,7 @@ int settings_get(FAR char * key, FAR enum settings_type_e type, ...);
  *
  ****************************************************************************/
 
-int settings_set(FAR char * key, FAR enum settings_type_e type, ...);
+int settings_set(FAR char *key, FAR enum settings_type_e type, ...);
 
 /****************************************************************************
  * Name: settings_iterate
@@ -348,7 +355,23 @@ int settings_set(FAR char * key, FAR enum settings_type_e type, ...);
  *
  ****************************************************************************/
 
-int settings_iterate(int idx, FAR setting_t * setting);
+int settings_iterate(int idx, FAR setting_t *setting);
+
+/****************************************************************************
+ * Name: settings_usedsize
+ *
+ * Description:
+ *    Returns the total storage size used (in bytes).
+ *
+ * Input Parameters:
+ *    used      - pointer to struct to return used size of a given storage
+ *
+ * Returned Value:
+ *    Success or negated failure code
+ *
+ ****************************************************************************/
+
+int settings_usedsize(storage_used_t *used);
 
 #endif /* UTILS_SETTINGS_H_ */
 

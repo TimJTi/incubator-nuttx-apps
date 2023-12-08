@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include "system/settings.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -45,18 +46,21 @@
 
 /* Text storage. */
 
-int load_text(FAR char * file);
-int save_text(FAR char * file);
+int load_text(FAR char *file);
+int save_text(FAR char *file);
+int size_text(FAR storage_used_t *used);
 
 /* Binary storage. */
 
-int load_bin(FAR char * file);
-int save_bin(FAR char * file);
+int load_bin(FAR char *file);
+int save_bin(FAR char *file);
+int size_bin(FAR storage_used_t *used);
 
 /* EEPROM storage. */
 
-int load_eeprom(FAR char * file);
-int save_eeprom(FAR char * file);
+int load_eeprom(FAR char *file);
+int save_eeprom(FAR char *file);
+int size_eeprom(FAR storage_used_t *used);
 
 #endif /* SETTINGS_STORAGE_H_*/
 

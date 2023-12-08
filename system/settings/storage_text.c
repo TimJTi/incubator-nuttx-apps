@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,14 +64,69 @@
  ****************************************************************************/
 
 FAR static setting_t *getsetting(char *key);
-extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+static size_t used_storage;
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
+
 /****************************************************************************
  * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: getsetting
+ *
+ * Description:
+ *    Gets the setting information from a given key.
+ *
+ * Input Parameters:
+ *    key        - key of the required setting
+ *
+ * Returned Value:
+ *   The setting
+ *
+ ****************************************************************************/
+
+FAR setting_t *getsetting(char *key)
+{
+  int i;
+  FAR setting_t *setting;
+
+  if (strlen(key) >= CONFIG_SYSTEM_SETTINGS_KEY_SIZE)
+    {
+      return NULL;
+    }
+
+  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
+    {
+      setting = &map[i];
+
+      if (strcmp(key, setting->key) == 0)
+        {
+          return setting;
+        }
+
+      if (setting->type == SETTING_EMPTY)
+        {
+          strncpy(setting->key, key, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
+          setting->key[CONFIG_SYSTEM_SETTINGS_KEY_SIZE - 1] = '\0';
+          return setting;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -131,6 +187,7 @@ int load_text(FAR char *file)
       return -ENOENT;
     }
 
+  used_storage = 0;
   buffer = malloc(BUFFER_SIZE);
   if (buffer == NULL)
     {
@@ -211,7 +268,8 @@ int load_text(FAR char *file)
                 }
 
               setting->type = SETTING_STRING;
-              strncpy(setting->val.s, val, CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
+              strncpy(setting->val.s, val,
+                      CONFIG_SYSTEM_SETTINGS_VALUE_SIZE);
               setting->val.s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE - 1] = '\0';
             }
         }
@@ -260,6 +318,8 @@ int load_text(FAR char *file)
         {
           memset(setting->key, 0, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
         }
+
+      used_storage += sizeof(setting_t);
     }
 
   free(buffer);
@@ -306,6 +366,7 @@ int save_text(FAR char *file)
       goto abort;
     }
 
+  used_storage = 0;
   for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
     {
       if (map[i].type == SETTING_EMPTY)
@@ -358,6 +419,8 @@ int save_text(FAR char *file)
             }
             break;
         }
+
+      used_storage += sizeof(setting_t);
     }
 
   fclose(f);
@@ -372,46 +435,22 @@ abort:
 }
 
 /****************************************************************************
- * Name: getsetting
+ * Name: size_text
  *
  * Description:
- *    Gets the setting information from a given key.
+ *    Returns the total storage size used (in bytes).
  *
  * Input Parameters:
- *    key        - key of the required setting
+ *    used      - pointer to struct to return used size of a given storage
  *
  * Returned Value:
- *   The setting
+ *    Success or negated failure code
  *
  ****************************************************************************/
 
-FAR setting_t *getsetting(char *key)
+int size_text(storage_used_t *used)
 {
-  int i;
-  FAR setting_t *setting;
-
-  if (strlen(key) >= CONFIG_SYSTEM_SETTINGS_KEY_SIZE)
-    {
-      return NULL;
-    }
-
-  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
-    {
-      setting = &map[i];
-
-      if (strcmp(key, setting->key) == 0)
-        {
-          return setting;
-        }
-
-      if (setting->type == SETTING_EMPTY)
-        {
-          strncpy(setting->key, key, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
-          setting->key[CONFIG_SYSTEM_SETTINGS_KEY_SIZE - 1] = '\0';
-          return setting;
-        }
-    }
-
-  return NULL;
+  DEBUGASSERT(used != NULL);
+  used->size = used_storage;
+  return OK;
 }
-

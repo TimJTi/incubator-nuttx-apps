@@ -25,6 +25,7 @@
 #include "system/settings.h"
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <nuttx/crc32.h>
 #include <stdlib.h>
@@ -62,14 +63,61 @@
  ****************************************************************************/
 
 FAR static setting_t *getsetting(char *key);
-extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+static size_t used_storage;
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
+
 /****************************************************************************
  * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: getsetting
+ *
+ * Description:
+ *    Gets the setting information from a given key.
+ *
+ * Input Parameters:
+ *    key        - key of the required setting
+ *
+ * Returned Value:
+ *   The setting
+ *
+ ****************************************************************************/
+
+FAR setting_t *getsetting(FAR char *key)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
+    {
+      FAR setting_t *setting = &map[i];
+
+      if (strcmp(key, setting->key) == 0)
+        {
+          return setting;
+        }
+
+      if (setting->type == SETTING_EMPTY)
+        {
+          return setting;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -104,6 +152,7 @@ int load_bin(FAR char *file)
       return -ENOENT;
     }
 
+  used_storage = 0;
   valid = 0;
   read(fd, &valid, sizeof(uint16_t));
 
@@ -132,6 +181,7 @@ int load_bin(FAR char *file)
     }
 
   lseek(fd, (sizeof(uint16_t) * 2), SEEK_SET);  /* Get after valid & size */
+  used_storage = (sizeof(uint16_t) * 2) + sizeof(exp_crc);
 
   for (i = 0; i < count; i++)
     {
@@ -144,6 +194,7 @@ int load_bin(FAR char *file)
         }
 
       memcpy(slot, &setting, sizeof(setting_t));
+      used_storage += sizeof(setting_t);
     }
 
 abort:
@@ -239,38 +290,22 @@ abort:
 }
 
 /****************************************************************************
- * Name: getsetting
+ * Name: size_bin
  *
  * Description:
- *    Gets the setting information from a given key.
+ *    Returns the total storage size used (in bytes).
  *
  * Input Parameters:
- *    key        - key of the required setting
+ *    used      - pointer to struct to return used size of a given storage
  *
  * Returned Value:
- *   The setting
+ *    Success or negated failure code
  *
  ****************************************************************************/
 
-FAR setting_t *getsetting(FAR char *key)
+int size_bin(storage_used_t *used)
 {
-  int i;
-
-  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
-    {
-      FAR setting_t *setting = &map[i];
-
-      if (strcmp(key, setting->key) == 0)
-        {
-          return setting;
-        }
-
-      if (setting->type == SETTING_EMPTY)
-        {
-          return setting;
-        }
-    }
-
-  return NULL;
+  DEBUGASSERT(used != NULL);
+  used->size = used_storage;
+  return OK;
 }
-
