@@ -837,9 +837,11 @@ int settings_init(void)
   g_settings.sev.sigev_notify_function = dump_cache;
 
   memset(&g_settings.trigger, 0, sizeof(struct itimerspec));
-  g_settings.trigger.it_value.tv_sec   = 0;
-  g_settings.trigger.it_value.tv_nsec  = (1000 * 1000 *
-                                       CONFIG_SYSTEM_SETTINGS_CACHE_TIME_MS);
+  g_settings.trigger.it_value.tv_sec   =
+                               CONFIG_SYSTEM_SETTINGS_CACHE_TIME_MS / 1000;
+  g_settings.trigger.it_value.tv_nsec  =
+                              (CONFIG_SYSTEM_SETTINGS_CACHE_TIME_MS % 1000) *
+                               1000 * 1000;
 
   timer_create(CLOCK_REALTIME, &g_settings.sev, &g_settings.timerid);
 #endif
