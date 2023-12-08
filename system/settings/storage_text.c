@@ -197,7 +197,7 @@ int load_text(FAR char *file)
 
   while (fgets(buffer, BUFFER_SIZE, f))
     {
-      int i;
+      int  i;
 
       /* Remove any line terminators */
 
@@ -301,10 +301,17 @@ int load_text(FAR char *file)
             }
           else
             {
-              /* It's an integer */
+              /* It's an integer or byte */
 
               i = 0;
-              if (sscanf(val, "%d", &i) == 1)
+              char s[8];
+              sscanf(val, "%d%s", &i, s);
+              if (strcmp(s, "(byte)") == 0)
+                {
+                  setting->type = SETTING_BYTE;
+                  setting->val.i = i;
+                }
+              else if (sscanf(val, "%d", &i) == 1)
                 {
                   setting->type = SETTING_INT;
                   setting->val.i = i;
@@ -389,7 +396,12 @@ int save_text(FAR char *file)
                       map[i].val.i);
             }
             break;
-
+          case SETTING_BYTE:
+            {
+              fprintf(f, "%s=%d(byte)\n", map[i].key,
+                      map[i].val.i);
+            }
+            break;
           case SETTING_BOOL:
             {
               fprintf(f, "%s=%s\n", map[i].key,

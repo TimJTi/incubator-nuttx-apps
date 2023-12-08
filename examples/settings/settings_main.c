@@ -285,8 +285,24 @@ int settings_main(int argc, FAR char *argv[])
       goto end;
     }
 
-  printf("Retrieved IP address settings value (s1) with value:0x%08lx\n",
+    printf("Retrieved IP address settings value (s1) with value:0x%08lx\n",
           load_ip.s_addr);
+
+  ret = settings_create("b1", SETTING_BYTE, 100);
+  if (ret < 0)
+    {
+      printf("Byte setting (b1) create failed: %d\n", ret);
+      goto end;
+    }
+
+  ret = settings_get("b1", SETTING_BYTE, &testval);
+  if (ret < 0)
+    {
+      printf("settings retrieve failed: %d\n", ret);
+      goto end;
+    }
+
+  printf("Retrieved settings value (b1) with value:%d\n", testval);  
 
   printf("syncing storages\n");
   ret = settings_sync();

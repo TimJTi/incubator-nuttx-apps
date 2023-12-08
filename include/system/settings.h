@@ -82,6 +82,7 @@ enum settings_type_e
   SETTING_FLOAT,
   SETTING_STRING,
   SETTING_IP_ADDR,
+  SETTING_BYTE,
 };
 
 typedef struct
@@ -96,9 +97,9 @@ typedef struct
   enum settings_type_e type;
   union
   {
-    int i;
+    int    i;
     double f;
-    char s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE];
+    char   s[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE];
     struct in_addr ip;
   } val;
 } setting_t;
