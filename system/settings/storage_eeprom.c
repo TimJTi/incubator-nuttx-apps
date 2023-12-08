@@ -19,18 +19,18 @@
  ****************************************************************************/
 
 /****************************************************************************
-*
-* The EEPROM storage is similar to the binary type, but only saves out values
-* if they've actually changed, to maximise device life.
-*
-* It can, of course, be used with other storage media types that have limited
-* write cycle capabilities.
-*
-* RE-VISIT IN FUTURE - This could be enhanced by allowing for variable
-* storage sizes, but gets complicated if the settings type - and hence size -
-* changes as settings after the saved storage will need to move/change.
-*
-*****************************************************************************/
+ *
+ * The EEPROM storage is similar to the binary type, but only saves out
+ * values if they've actually changed, to maximise device life.
+ *
+ * It can, of course, be used with other storage media types that have
+ * limited write cycle capabilities.
+ *
+ * RE-VISIT IN FUTURE - This could be enhanced by allowing for variable
+ * storage sizes, but gets complicated if the settings type, and hence size,
+ * changes as settings after the saved storage will need to move/change.
+ *
+ ****************************************************************************/
 
 /****************************************************************************
  * Included Files
@@ -39,6 +39,7 @@
 #include "system/settings.h"
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <nuttx/crc32.h>
 #include <stdlib.h>
@@ -60,14 +61,114 @@
  ****************************************************************************/
 
 FAR static setting_t *getsetting(char *key);
-extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
+size_t getsettingsize(enum settings_type_e type);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+static size_t used_storage;
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern setting_t map[CONFIG_SYSTEM_SETTINGS_MAP_SIZE];
+
 /****************************************************************************
  * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: getsetting
+ *
+ * Description:
+ *    Gets the setting information from a given key.
+ *
+ * Input Parameters:
+ *    key        - key of the required setting
+ *
+ * Returned Value:
+ *   The setting
+ *
+ ****************************************************************************/
+
+FAR setting_t *getsetting(FAR char *key)
+{
+  int i;
+
+  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
+    {
+      FAR setting_t *setting = &map[i];
+
+      if (strcmp(key, setting->key) == 0)
+        {
+          return setting;
+        }
+
+      if (setting->type == SETTING_EMPTY)
+        {
+          return setting;
+        }
+    }
+
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: getsettingsize
+ *
+ * Description:
+ *    Helper function to gets the size of the setting type for a given type.
+ *
+ * Input Parameters:
+ *    type        - the type to get the size of
+ *
+ * Returned Value:
+ *   The setting
+ *
+ ****************************************************************************/
+
+size_t getsettingsize(enum settings_type_e type)
+{
+  switch (type)
+    {
+      case SETTING_STRING:
+        {
+          return CONFIG_SYSTEM_SETTINGS_VALUE_SIZE * (sizeof(char));
+        }
+      break;
+      case SETTING_BOOL:
+        {
+          return sizeof(bool);
+        }
+      break;
+      case SETTING_INT:
+        {
+          return sizeof(int);
+        }
+      break;
+      case SETTING_FLOAT:
+        {
+          return sizeof(float);
+        }
+      break;
+      case SETTING_IP_ADDR:
+        {
+          return sizeof(struct in_addr);
+        }
+      break;
+      case SETTING_EMPTY:
+      default:
+        {
+          return 0;
+        }
+      break;
+    }
+}
+
+/****************************************************************************
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -95,6 +196,7 @@ int load_eeprom(FAR char *file)
   uint32_t      exp_crc = 0;
   setting_t     setting;
   FAR setting_t *slot;
+  size_t        size;
 
   fd = open(file, O_RDONLY);
   if (fd < 0)
@@ -102,8 +204,9 @@ int load_eeprom(FAR char *file)
       return -ENOENT;
     }
 
+  used_storage = 0;
   valid = 0;
-  read(fd, &valid, sizeof(uint16_t));
+  read(fd, &valid, sizeof(valid));
 
   if (valid != VALID)
     {
@@ -112,35 +215,47 @@ int load_eeprom(FAR char *file)
     }
 
   count = 0;
-  read(fd, &count, sizeof(uint16_t));
+  read(fd, &count, sizeof(count));
+
+  /* check storage integrity using crc check */
 
   for (i = 0; i < count; i++)
     {
-      read(fd, &setting, sizeof(setting_t));
-      calc_crc = crc32part((FAR uint8_t *)&setting, sizeof(setting_t),
-                            calc_crc);
+      read(fd, &setting.key, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
+      read(fd, &setting.type, sizeof(uint16_t));
+      size = getsettingsize(setting.type);
+      read(fd, &setting.val, size);
+      size += (CONFIG_SYSTEM_SETTINGS_KEY_SIZE + sizeof(uint16_t));
+      calc_crc = crc32part((FAR uint8_t *)&setting, size, calc_crc);
     }
 
-  read(fd, &exp_crc, sizeof(uint32_t));
+  lseek(fd, 0, SEEK_CUR);
+  read(fd, &exp_crc, sizeof(exp_crc));
   if (calc_crc != exp_crc)
     {
       ret = -EBADMSG;
       goto abort;
     }
 
-  lseek(fd, (sizeof(uint16_t) * 2), SEEK_SET);  /* Get after valid & size */
+  lseek(fd, (sizeof(count) + sizeof(valid)), SEEK_SET);
+
+  used_storage = sizeof(valid) + sizeof(count) + sizeof(calc_crc);
 
   for (i = 0; i < count; i++)
     {
-      read(fd, &setting, sizeof(setting_t));
-
+      read(fd, &setting.key, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
+      read(fd, &setting.type, sizeof(uint16_t));
+      size = getsettingsize(setting.type);
+      read(fd, &setting.val, size);
       slot = getsetting(setting.key);
       if (slot == NULL)
         {
           continue;
         }
 
-      memcpy(slot, &setting, sizeof(setting_t));
+      size += (CONFIG_SYSTEM_SETTINGS_KEY_SIZE + sizeof(uint16_t));
+      used_storage += size;
+      memcpy(slot, &setting, size);
     }
 
 abort:
@@ -177,8 +292,9 @@ int save_eeprom(FAR char *file)
   int           i;
   uint32_t      crc = 0;
   setting_t     old_setting;
-  FAR setting_t new_setting;
-  off_t         offset;
+  setting_t     new_setting;
+  size_t        new_size;
+  size_t        old_size;
 
   /* How many settings do we have? */
 
@@ -192,6 +308,7 @@ int save_eeprom(FAR char *file)
       count++;
     }
 
+  used_storage = 0;
   fd = open(file, (O_RDWR | O_TRUNC), 0666);
   if (fd < 0)
     {
@@ -201,45 +318,61 @@ int save_eeprom(FAR char *file)
 
   read(fd, &valid, sizeof(valid));
   eeprom_cnt = 0;
-  read(fd, &eeprom_cnt, sizeof(uint16_t));
+  read(fd, &eeprom_cnt, sizeof(eeprom_cnt));
 
   for (i = 0; i < count; i++)
     {
-      offset = (sizeof(uint16_t) * 2) + (i * sizeof(setting_t));
-      lseek(fd, offset, SEEK_SET);
-      read(fd, &old_setting, sizeof(setting_t));
       new_setting = map[i];
-      if (crc32((FAR uint8_t *)&new_setting, sizeof(setting_t)) !=
-          crc32((FAR uint8_t *)&old_setting, sizeof(setting_t)))
+      new_size = getsettingsize(new_setting.type);
+      new_size += CONFIG_SYSTEM_SETTINGS_KEY_SIZE + sizeof(uint16_t);
+      read(fd, &old_setting.key, CONFIG_SYSTEM_SETTINGS_KEY_SIZE);
+      read(fd, &old_setting.type, sizeof(uint16_t));
+      old_size = getsettingsize(old_setting.type);
+      read(fd, &old_setting.val, old_size);
+      old_size += (CONFIG_SYSTEM_SETTINGS_KEY_SIZE + sizeof(uint16_t));
+
+      if (crc32((FAR uint8_t *)&new_setting, sizeof(new_setting)) !=
+          crc32((FAR uint8_t *)&old_setting, sizeof(old_setting)))
         {
-          /* Only write the value if changed */
+          /* Only write the value if changed, or setting was EMPTY */
 
-          lseek(fd, offset, SEEK_SET);
-          write(fd, &new_setting, sizeof(setting_t));
+          if (i < eeprom_cnt)
+            {
+              /* We can only change type if the size is no bigger */
+
+              DEBUGASSERT(new_size <= old_size);
+            }
+
+          lseek(fd, -old_size, SEEK_CUR); /* rewind */
+          write(fd, &new_setting, new_size);
+          crc = crc32part((FAR uint8_t *)&new_setting, new_size, crc);
+          used_storage += new_size;
         }
-
-      crc = crc32part((FAR uint8_t *)&new_setting, sizeof(setting_t), crc);
+      else
+        {
+          lseek(fd, (old_size - new_size), SEEK_CUR); /* FWD if needed */
+          crc = crc32part((FAR uint8_t *)&old_setting, old_size, crc);
+          used_storage += old_size;
+        }
     }
 
   write(fd, &crc, sizeof(crc));
 
-  offset = 0;
-  if (valid != VALID)
+  lseek(fd, 0, SEEK_SET);
+  if (valid != VALID) /* Only write if changed */
     {
-      lseek(fd, offset, SEEK_SET);
       valid = VALID;
       write(fd, &valid, sizeof(valid));
     }
-  else
-    {
-      offset += sizeof(valid);
-      lseek(fd, offset, SEEK_SET);
-    }
 
-  if (eeprom_cnt != count)
+  lseek(fd, sizeof(valid), SEEK_SET);
+
+  if (eeprom_cnt != count)  /* Only write if changed */
     {
       write(fd, &count, sizeof(count));
     }
+
+  used_storage += sizeof(valid) + sizeof(eeprom_cnt) + sizeof(crc);
 
   close(fd);
 
@@ -247,37 +380,22 @@ int save_eeprom(FAR char *file)
 }
 
 /****************************************************************************
- * Name: getsetting
+ * Name: size_eeprom
  *
  * Description:
- *    Gets the setting information from a given key.
+ *    Returns the total storage size used (in bytes).
  *
  * Input Parameters:
- *    key        - key of the required setting
+ *    used      - pointer to struct to return used size of a given storage
  *
  * Returned Value:
- *   The setting
+ *    Success or negated failure code
  *
  ****************************************************************************/
 
-FAR setting_t *getsetting(FAR char *key)
+int size_eeprom(storage_used_t *used)
 {
-  int i;
-
-  for (i = 0; i < CONFIG_SYSTEM_SETTINGS_MAP_SIZE; i++)
-    {
-      FAR setting_t *setting = &map[i];
-
-      if (strcmp(key, setting->key) == 0)
-        {
-          return setting;
-        }
-
-      if (setting->type == SETTING_EMPTY)
-        {
-          return setting;
-        }
-    }
-
-  return NULL;
+  DEBUGASSERT(used != NULL);
+  used->size = used_storage;
+  return OK;
 }

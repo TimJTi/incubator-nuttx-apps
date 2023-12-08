@@ -822,6 +822,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       {
         storage->load_fn = load_bin;
         storage->save_fn = save_bin;
+        storage->size_fn = size_bin;
       }
       break;
 
@@ -829,6 +830,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       {
         storage->load_fn = load_text;
         storage->save_fn = save_text;
+        storage->size_fn = size_text;
       }
       break;
 
@@ -836,6 +838,7 @@ int settings_setstorage(FAR char *file, enum storage_type_e type)
       {
         storage->load_fn = load_eeprom;
         storage->save_fn = save_eeprom;
+        storage->size_fn = size_eeprom;
       }
       break;
 
@@ -1546,4 +1549,24 @@ errout:
 bool settings_savepending(void)
 {
   return g_settings.wrpend;
+}
+
+int settings_usedsize(storage_used_t *used)
+{
+  int ret;
+
+  DEBUGASSERT(used != NULL);
+
+  if (used->store_num > (CONFIG_SYSTEM_SETTINGS_MAX_STORAGES - 1))
+    {
+      return -ENOENT;
+    }
+  
+  if ((g_settings.store[used->store_num].file[0] != '\0') &&
+       g_settings.store[used->store_num].size_fn)
+    {
+      ret = g_settings.store[used->store_num].size_fn(used);
+    }
+
+  return ret;
 }
