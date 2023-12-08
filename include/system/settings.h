@@ -77,7 +77,7 @@
 enum settings_type_e
 {
   SETTING_EMPTY   = 0,
-  SETTING_INT,        /* INT32 assumed */
+  SETTING_INT,        /* INT32 */
   SETTING_BOOL,
   SETTING_FLOAT,
   SETTING_STRING,
