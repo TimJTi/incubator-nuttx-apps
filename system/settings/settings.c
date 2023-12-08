@@ -76,6 +76,8 @@ static size_t   get_string(FAR setting_t *setting, FAR char *buffer,
 static int      set_string(FAR setting_t *setting, FAR char *str);
 static int      get_int(FAR setting_t *setting, FAR int *i);
 static int      set_int(FAR setting_t *setting, int i);
+static int      get_byte(FAR setting_t *setting, FAR int *i);
+static int      set_byte(FAR setting_t *setting, int i);
 static int      get_bool(FAR setting_t *setting, FAR int *i);
 static int      set_bool(FAR setting_t *setting, int i);
 static int      get_float(FAR setting_t *setting, FAR double *f);
@@ -284,12 +286,17 @@ static int get_int(FAR setting_t *setting, FAR int *i)
 {
   DEBUGASSERT(setting);
   DEBUGASSERT((setting->type == SETTING_INT)  ||
+              (setting->type == SETTING_BYTE) ||
               (setting->type == SETTING_BOOL) ||
               (setting->type == SETTING_FLOAT));
 
   if (setting->type == SETTING_INT)
     {
       *i = setting->val.i;
+    }
+  else if (setting->type == SETTING_BYTE)
+    {
+      *i = (int)setting->val.i;
     }
   else if (setting->type == SETTING_BOOL)
     {
@@ -326,6 +333,7 @@ static int set_int(FAR setting_t *setting, int i)
 {
   DEBUGASSERT(setting);
   if ((setting->type == SETTING_INT)  &&
+      (setting->type == SETTING_BYTE) &&
       (setting->type == SETTING_BOOL) &&
       (setting->type == SETTING_FLOAT))
     {
@@ -334,6 +342,84 @@ static int set_int(FAR setting_t *setting, int i)
 
   setting->type = SETTING_INT;
   setting->val.i = i;
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: get_byte
+ *
+ * Description:
+ *    Gets a setting for a byte value
+ *
+ * Input Parameters:
+ *    setting        - pointer to the setting type
+ *    i              - pointer to return the byte value
+ * Returned Value:
+ *   Success or negated failure code
+ *
+ ****************************************************************************/
+
+static int get_byte(FAR setting_t *setting, FAR int *i)
+{
+  DEBUGASSERT(setting);
+  DEBUGASSERT((setting->type == SETTING_INT)  ||
+              (setting->type == SETTING_BYTE) ||
+              (setting->type == SETTING_BOOL) ||
+              (setting->type == SETTING_FLOAT));
+
+  if (setting->type == SETTING_INT)
+    {
+      *i = (uint8_t)setting->val.i;
+    }
+  else if (setting->type == SETTING_BYTE)
+    {
+      *i = (uint8_t)setting->val.i;
+    }
+  else if (setting->type == SETTING_BOOL)
+    {
+      *i = !!setting->val.i;
+    }
+  else if (setting->type == SETTING_FLOAT)
+    {
+      *i = (uint8_t)setting->val.f;
+    }
+  else
+    {
+      return -EINVAL;
+    }
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: set_byte
+ *
+ * Description:
+ *    Creates a setting for a byte value
+ *
+ * Input Parameters:
+ *    setting        - pointer to the setting type
+ *    i              - the byte value
+ *
+ * Returned Value:
+ *   Success or negated failure code
+ *
+ ****************************************************************************/
+
+static int set_byte(FAR setting_t *setting, int i)
+{
+  DEBUGASSERT(setting);
+  if ((setting->type == SETTING_INT)  &&
+      (setting->type == SETTING_BYTE) &&
+      (setting->type == SETTING_BOOL) &&
+      (setting->type == SETTING_FLOAT))
+    {
+      return -EACCES;
+    }
+
+  setting->type = SETTING_BYTE;
+  setting->val.i = (int)i;
 
   return OK;
 }
@@ -356,9 +442,11 @@ static int get_bool(FAR setting_t *setting, FAR int *i)
 {
   DEBUGASSERT(setting);
   DEBUGASSERT((setting->type == SETTING_BOOL) ||
+              (setting->type == SETTING_BYTE) ||
               (setting->type == SETTING_INT));
 
-  if ((setting->type == SETTING_INT) || (setting->type == SETTING_BOOL))
+  if ((setting->type == SETTING_INT) || (setting->type == SETTING_BYTE) ||
+      (setting->type == SETTING_BOOL))
     {
       *i = !!setting->val.i;
     }
@@ -389,6 +477,7 @@ static int set_bool(FAR setting_t *setting, int i)
 {
   DEBUGASSERT(setting);
   if ((setting->type == SETTING_BOOL) &&
+      (setting->type == SETTING_BYTE) &&
       (setting->type == SETTING_INT))
     {
       return -EACCES;
@@ -418,6 +507,7 @@ static int get_float(FAR setting_t *setting, FAR double *f)
 {
   DEBUGASSERT(setting);
   DEBUGASSERT((setting->type == SETTING_FLOAT) ||
+              (setting->type == SETTING_BYTE)  ||
               (setting->type == SETTING_INT));
 
   if (setting->type == SETTING_FLOAT)
@@ -425,6 +515,10 @@ static int get_float(FAR setting_t *setting, FAR double *f)
       *f = setting->val.f;
     }
   else if (setting->type == SETTING_INT)
+    {
+      *f = (double)setting->val.i;
+    }
+  else if (setting->type == SETTING_BYTE)
     {
       *f = (double)setting->val.i;
     }
@@ -455,6 +549,7 @@ static int set_float(FAR setting_t *setting, double f)
 {
   DEBUGASSERT(setting);
   if ((setting->type == SETTING_FLOAT) &&
+      (setting->type == SETTING_BYTE) &&
       (setting->type == SETTING_INT))
     {
       return -EACCES;
@@ -1165,6 +1260,12 @@ int settings_create(FAR char *key, enum settings_type_e type, ...)
           }
           break;
 
+        case SETTING_BYTE:
+          {
+            i = va_arg(ap, int);
+            ret = set_byte(setting, i);
+          }
+          break;
         case SETTING_BOOL:
           {
             i = va_arg(ap, int);
@@ -1322,6 +1423,13 @@ int settings_get(FAR char *key, enum settings_type_e type, ...)
       }
       break;
 
+    case SETTING_BYTE:
+      {
+        FAR int *i = va_arg(ap, FAR int *);
+        ret = get_byte(setting, i);
+      }
+      break;
+
     case SETTING_BOOL:
       {
         FAR int *i = va_arg(ap, FAR int *);
@@ -1419,6 +1527,13 @@ int settings_set(FAR char *key, enum settings_type_e type, ...)
       {
         i = va_arg(ap, int);
         ret = set_int(setting, i);
+      }
+      break;
+
+    case SETTING_BYTE:
+      {
+        i = va_arg(ap, int);
+        ret = set_byte(setting, i);
       }
       break;
 
@@ -1561,7 +1676,7 @@ int settings_usedsize(storage_used_t *used)
     {
       return -ENOENT;
     }
-  
+
   if ((g_settings.store[used->store_num].file[0] != '\0') &&
        g_settings.store[used->store_num].size_fn)
     {

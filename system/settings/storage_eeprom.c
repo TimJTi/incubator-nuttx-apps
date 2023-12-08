@@ -148,6 +148,11 @@ size_t getsettingsize(enum settings_type_e type)
           return sizeof(int);
         }
       break;
+      case SETTING_BYTE:
+        {
+          return sizeof(uint8_t);
+        }
+      break;
       case SETTING_FLOAT:
         {
           return sizeof(float);
@@ -330,18 +335,20 @@ int save_eeprom(FAR char *file)
       old_size = getsettingsize(old_setting.type);
       read(fd, &old_setting.val, old_size);
       old_size += (CONFIG_SYSTEM_SETTINGS_KEY_SIZE + sizeof(uint16_t));
+      if ((i < eeprom_cnt) && (new_size > old_size))
+        {
+          /* We can only change /existing/ type if the size is no larger.
+           * As this can be called via a timer callback, we can't easily
+           * return an error code.
+           */
+
+          DEBUGASSERT(0);
+        }
 
       if (crc32((FAR uint8_t *)&new_setting, sizeof(new_setting)) !=
           crc32((FAR uint8_t *)&old_setting, sizeof(old_setting)))
         {
           /* Only write the value if changed, or setting was EMPTY */
-
-          if (i < eeprom_cnt)
-            {
-              /* We can only change type if the size is no bigger */
-
-              DEBUGASSERT(new_size <= old_size);
-            }
 
           lseek(fd, -old_size, SEEK_CUR); /* rewind */
           write(fd, &new_setting, new_size);
@@ -374,6 +381,7 @@ int save_eeprom(FAR char *file)
 
   used_storage += sizeof(valid) + sizeof(eeprom_cnt) + sizeof(crc);
 
+exit:
   close(fd);
 
   return ret;
