@@ -353,9 +353,16 @@ int save_eeprom(FAR char *file)
           lseek(fd, -old_size, SEEK_CUR); /* rewind */
           write(fd, &new_setting, new_size);
           crc = crc32part((FAR uint8_t *)&new_setting, new_size, crc);
+          lseek(fd, -new_size, SEEK_CUR); /* rewind */
+          read(fd, &old_setting, SEEK_CUR);
+          if (crc32((FAR uint8_t *)&new_setting, sizeof(new_setting)) !=
+          crc32((FAR uint8_t *)&old_setting, sizeof(new_setting)))
+            {
+              return -EIO;
+            }
           used_storage += new_size;
 
-#warning NB: still need to add verify, by read and compare.
+#warning NB: still need to check the verify addition.
 
         }
       else

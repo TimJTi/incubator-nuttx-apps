@@ -31,15 +31,15 @@ The following types are currently supported.
 - ip address
 - float
 
-### Setting Storage Sizes
+### Setting Storage Size
 
 Kconfig is used to determine the size of the various fields used:
 
-- <CONFIG_SYSTEM_SETTINGS_MAP_SIZE>       the total number settings allowed
-- <CONFIG_SYSTEM_SETTINGS_MAX_STORAGES>   the number of storage files that can be used
-- <CONFIG_SYSTEM_SETTINGS_VALUE_SIZE>     the storage size of a STRING value
-- <CONFIG_SYSTEM_SETTINGS_KEY_SIZE>       the size of the KEY field
-- <CONFIG_SYSTEM_SETTINGS_MAX_FILENAME>   the maximum filename size
+- <code>CONFIG_SYSTEM_SETTINGS_MAP_SIZE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>the total number settings allowed
+- <code>CONFIG_SYSTEM_SETTINGS_MAX_STORAGES&nbsp;</code>the number of storage files that can be used
+- <code>CONFIG_SYSTEM_SETTINGS_VALUE_SIZE&nbsp;&nbsp;&nbsp;</code>the storage size of a STRING value
+- <code>CONFIG_SYSTEM_SETTINGS_KEY_SIZE&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>the size of the KEY field
+- <code>CONFIG_SYSTEM_SETTINGS_MAX_FILENAME&nbsp;</code>the maximum filename size
 
 # Signal
 
@@ -71,11 +71,38 @@ This is like STORAGE_BINARY with the following differences.
 - When writing data to the file, only changed values are written out, to minimise the number of write cycles. This, of course, applies to other storage technologies too.
 - Values are stored using the minimum number of data bytes possible, since EEPROM devices are usually small.
 - A saved value is verified by a read and compare, since the write mechanism has no inherent confirmation of a correct write operation.
-- Other storage types allow, in some case, settings to be re-specified (cast) between various types. To minimise the storage space used, EEPROM storage only allows this if the new storage size is the same or less that the initially created storage type.
-
+- Other storage types allow, in some case, settings to be re-specified (cast) between various types. To minimise the storage space used, EEPROM storage only allows this if the new storage size is the same or less than the size of thge initially created storage type.
   - This could be done, if needed, using an external function to read all data, re-cast the settings, and recreate them all from scratch.
 
 # Usage
 
+## Most common
 
+This is the usual sequence of calls to use the settings utility.
 
+1. Call <code>settings_init();</code>
+2. Call <code>settings_setstorage("path", storage_type);</code> for every/any file storage in use
+  - for example <code>settings_setstorage("/dev/eeprom", STORAGE_EPROM);</code>
+3. Call <code>settings_create(key_name, settings_type, default value)</code> for every setting required
+4. <code>settings_notify()</code>. 
+  - for example <code>settings_create("KEY1", SETTINGS_STRING, "Hello");</code>
+5. If a settings value needs to be read, call the variadic function <code>settings_get(key_name, settings_type, &variable, size);</code>. "size" is only needed for STRING types.
+  - for example <code>settings_get("KEY1", SETTINGS_STRING, &read_str, sizeof(readstr));</code>
+6. If a settings value needs to be changed, call the variadic function <code>settings_set(key_name, settings_type, &value, size);</code> "size" is only needed for STRING types.
+  - for example <code>settings_set("KEY1", SETTINGS_STRING, &new_string);</code>
+
+## Other functions
+Other functions exist to assist the user program.
+1. <code>settings_sync()</code>. This will synchronise the settings between file storages if more than 1 are in use
+2. <code>settings_savepending()</code>. This checks to see if write to file storage is pending. It is usually only needed of cached saves are in use and before the thread using settings exits, or before a storage_sync, so the application can wait until settings are actually written to the storage(s);
+3. <code>settings_iterate(idx, &setting)</code>. This gets a copy of a setting at the specified position. It can be used to iterate over the entire settings map, by using successive values of idx.
+4. <code>settings_type(key_name, &type)</code>. Gets the type of a given setting.
+5. <code>settings_clear()</code>. Clears all settings and sata in all storages is purged.
+6. <code>settings_hash(&hash)</code>. Gets the hash of the settings storage. This hash represents the internal state of the settings map. A unique number is calculated based on the contents of the whole map. This hash can be used to check the settings for any alterations: i.e. any setting that may had its value changed since last check.
+7. <code>settings_usedsize(&size)</code>. This returns the total used size, in bytes, of the saved storage map. It is most useful with small storages such as EEPROM.
+
+## Error codes
+The settings functions provide negated error return codes that can be used as required by the user application to deal with unexpected behaviour.
+
+## Example App
+There is an example app available to demonstrate the usage of many of the settings features <code>CONFIG_EXAMPLES_SETTINGS</code>.
