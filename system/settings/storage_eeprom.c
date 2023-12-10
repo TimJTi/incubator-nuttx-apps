@@ -354,6 +354,9 @@ int save_eeprom(FAR char *file)
           write(fd, &new_setting, new_size);
           crc = crc32part((FAR uint8_t *)&new_setting, new_size, crc);
           used_storage += new_size;
+
+#warning NB: still need to add verify, by read and compare.
+
         }
       else
         {

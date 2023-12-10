@@ -18,38 +18,6 @@
  *
  ****************************************************************************/
 
-/****************************************************************************
- *  The settings storage can be used to store and retrieve various
- *  configurable parameters. This storage is a RAM-based map (for fast
- *  access), but one or more files can be used too (so values can persist
- *  across system reboots).
- *
- *  Each setting is a key / value pair.
- *  The key is always a string, while there are many value types supported.
- *
- *  All strings, whether they represent a key or a value, must use a specific
- *  format. They must be ASCII, NULL-terminated strings, and they are always
- *  case-sensitive. They must obey to the following rules:
- *    - they cannot start with a number.
- *    - they cannot contain the characters '=', ';'.
- *    - they cannot contain the characters '\n', '\r'.
- *
- *  Since each setting has its own type, it is the user's responsibility to
- *  access the setting using the correct type. Some "casts" are possible
- *  (e.g. between bool and int), but generally reading with the wrong type
- *  will lead to failure.
- *
- *  There are also various types of files that can be used. Each file type
- *  is using a different data format to parse the stored data. Every type is
- *  expected to be best suited for a specific file system or medium type, or
- *  be better performing while used with external systems. In any case, all
- *  configured files are automatically synchronized whenever a value changes.
- *
- *  This is a thread-safe implementation. Different threads may access the
- *  settings simultaneously.
- *
- ****************************************************************************/
-
 #ifndef UTILS_SETTINGS_H_
 #define UTILS_SETTINGS_H_
 
