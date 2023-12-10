@@ -68,6 +68,7 @@ int settings_main(int argc, FAR char *argv[])
   int                  testval = 0x5aa5;
   char                 readstr[CONFIG_SYSTEM_SETTINGS_VALUE_SIZE];
   struct stat          sbuf;
+  volatile bool        wrpend;
 
 #ifdef CONFIG_EXAMPLES_SETTINGS_USE_TMPFS
 #  ifndef CONFIG_FS_TMPFS
@@ -302,7 +303,7 @@ int settings_main(int argc, FAR char *argv[])
       goto end;
     }
 
-  printf("Retrieved settings value (b1) with value:%d\n", testval);  
+  printf("Retrieved settings value (b1) with value:%d\n", testval);
 
   printf("syncing storages\n");
   ret = settings_sync();
@@ -313,7 +314,11 @@ int settings_main(int argc, FAR char *argv[])
     }
 
   printf("waiting for any cached saves to be written\n");
-  while (settings_savepending());
+  do
+    {
+      wrpend = settings_savepending();
+    }
+  while (!wrpend);
 
 end:
   printf("exiting settings example app\n");

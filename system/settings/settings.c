@@ -1665,7 +1665,13 @@ errout:
 
 bool settings_savepending(void)
 {
-  return g_settings.wrpend;
+  bool wrpend;
+
+  wrpend = pthread_mutex_lock(&g_settings.mtx);
+  wrpend = g_settings.wrpend;
+  pthread_mutex_unlock(&g_settings.mtx);
+
+  return wrpend;
 }
 
 /****************************************************************************
