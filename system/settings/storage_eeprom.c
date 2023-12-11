@@ -345,25 +345,15 @@ int save_eeprom(FAR char *file)
           DEBUGASSERT(0);
         }
 
-      if (crc32((FAR uint8_t *)&new_setting, sizeof(new_setting)) !=
-          crc32((FAR uint8_t *)&old_setting, sizeof(old_setting)))
+      if (crc32((FAR uint8_t *)&new_setting, new_size) !=
+          crc32((FAR uint8_t *)&old_setting, old_size))
         {
           /* Only write the value if changed, or setting was EMPTY */
 
           lseek(fd, -old_size, SEEK_CUR); /* rewind */
           write(fd, &new_setting, new_size);
           crc = crc32part((FAR uint8_t *)&new_setting, new_size, crc);
-          lseek(fd, -new_size, SEEK_CUR); /* rewind */
-          read(fd, &old_setting, SEEK_CUR);
-          if (crc32((FAR uint8_t *)&new_setting, sizeof(new_setting)) !=
-          crc32((FAR uint8_t *)&old_setting, sizeof(new_setting)))
-            {
-              return -EIO;
-            }
           used_storage += new_size;
-
-#warning NB: still need to check the verify addition.
-
         }
       else
         {

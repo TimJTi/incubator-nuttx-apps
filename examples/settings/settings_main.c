@@ -318,7 +318,7 @@ int settings_main(int argc, FAR char *argv[])
     {
       wrpend = settings_savepending();
     }
-  while (!wrpend);
+  while (wrpend);
 
 end:
   printf("exiting settings example app\n");

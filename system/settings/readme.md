@@ -70,7 +70,6 @@ This is like STORAGE_BINARY with the following differences.
 
 - When writing data to the file, only changed values are written out, to minimise the number of write cycles. This, of course, applies to other storage technologies too.
 - Values are stored using the minimum number of data bytes possible, since EEPROM devices are usually small.
-- A saved value is verified by a read and compare, since the write mechanism has no inherent confirmation of a correct write operation.
 - Other storage types allow, in some case, settings to be re-specified (cast) between various types. To minimise the storage space used, EEPROM storage only allows this if the new storage size is the same or less than the size of thge initially created storage type.
   - This could be done, if needed, using an external function to read all data, re-cast the settings, and recreate them all from scratch.
 
